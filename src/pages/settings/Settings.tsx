@@ -199,7 +199,7 @@ export default function Settings() {
             custom={
                 <>
                     <a
-                        href="https://github.com/revoltchat"
+                        href="https://github.com/RevoltGay"
                         target="_blank"
                         rel="noreferrer">
                         <ButtonItem compact>
@@ -236,7 +236,7 @@ export default function Settings() {
                             <a
                                 href={
                                     GIT_BRANCH !== "DETACHED"
-                                        ? `https://github.com/revoltchat/revite/tree/${GIT_BRANCH}`
+                                        ? `https://github.com/RevoltGay/revite/tree/${GIT_BRANCH}`
                                         : undefined
                                 }
                                 target="_blank"

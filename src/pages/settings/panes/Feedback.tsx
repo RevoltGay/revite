@@ -11,7 +11,7 @@ export function Feedback() {
     return (
         <div className={styles.feedback}>
             <a
-                href="https://github.com/revoltchat/revolt/discussions"
+                href="https://github.com/RevoltGay/revite/discussions"
                 target="_blank"
                 rel="noreferrer">
                 <CategoryButton
@@ -25,7 +25,7 @@ export function Feedback() {
                 </CategoryButton>
             </a>
             <a
-                href="https://github.com/revoltchat/revite/issues/new"
+                href="https://github.com/RevoltGay/revite/issues/new"
                 target="_blank"
                 rel="noreferrer">
                 <CategoryButton

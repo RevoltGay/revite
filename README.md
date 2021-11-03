@@ -54,4 +54,4 @@ yarn dev
 
 ## License
 
-Revite is licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/revite/blob/master/LICENSE).
+Revite is licensed under the [GNU Affero General Public License v3.0](https://github.com/RevoltGay/revite/blob/master/LICENSE).

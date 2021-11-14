@@ -1,6 +1,7 @@
 import { Send, ShieldX } from "@styled-icons/boxicons-solid";
 import Axios, { CancelTokenSource } from "axios";
 import { observer } from "mobx-react-lite";
+import owoify from "owoify-js";
 import { ChannelPermission } from "revolt.js/dist/api/permissions";
 import { Channel } from "revolt.js/dist/maps/Channels";
 import styled, { css } from "styled-components";
@@ -21,6 +22,7 @@ import {
 } from "../../../lib/renderer/Singleton";
 
 import { dispatch, getState } from "../../../redux";
+import { ExperimentOptions } from "../../../redux/reducers/experiments";
 import { Reply } from "../../../redux/reducers/queue";
 
 import { SoundContext } from "../../../context/Settings";
@@ -42,6 +44,7 @@ import ReplyBar from "./bars/ReplyBar";
 
 type Props = {
     channel: Channel;
+    experiments: ExperimentOptions;
 };
 
 export type UploadState =
@@ -116,6 +119,7 @@ export const CAN_UPLOAD_AT_ONCE = 4;
 
 export default observer(({ channel }: Props) => {
     const [draft, setDraft] = useState(getState().drafts[channel._id] ?? "");
+    const experiments = getState().experiments;
 
     const [uploadState, setUploadState] = useState<UploadState>({
         type: "none",
@@ -196,7 +200,60 @@ export default observer(({ channel }: Props) => {
         if (uploadState.type === "uploading" || uploadState.type === "sending")
             return;
 
-        const content = draft?.trim() ?? "";
+        let content = draft?.trim() ?? "";
+        if (experiments.enabled?.includes("censor")) {
+            content = content.replace(/(?<=(^| )[A-z])([eyuioa])/g, "\\*");
+        }
+        function gayify(): string {
+            const cycle = [
+                "F66",
+                "FC6",
+                "CF6",
+                "6F6",
+                "6FC",
+                "6CF",
+                "66F",
+                "C6F",
+            ];
+            let res = "$\\textsf{";
+            let i = 0;
+            for (let ci = 0; ci < content.length; ci++) {
+                let str = content[ci];
+                if (str == " ") {
+                    res += str;
+                    continue;
+                }
+                if (
+                    str == "{" ||
+                    str == "}" ||
+                    str == "\\" ||
+                    str == "&" ||
+                    str == "%" ||
+                    str == "$" ||
+                    str == "#" ||
+                    str == "_"
+                )
+                    str = "\\" + str;
+                res += `\\color{#${cycle[i]}}${str}`;
+                i++;
+                if (i == cycle.length) i = 0;
+            }
+            res += "}$";
+            return res;
+        }
+
+        experiments.enabled?.forEach((hhhh) => {
+            if (hhhh == "owo" || hhhh == "uwu" || hhhh == "uvu")
+                content = owoify(content, hhhh);
+            console.log(hhhh);
+        });
+        if (
+            experiments.enabled?.includes("rainbow") &&
+            !content.includes("\n")
+        ) {
+            const gay = gayify();
+            if (gay.length <= 2000) content = gay;
+        }
         if (uploadState.type === "attached") return sendFile(content);
         if (content.length === 0) return;
 

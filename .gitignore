@@ -6,6 +6,7 @@ dist-ssr
 *.local
 *.log
 /.idea
+/.vercel/
 
 public/assets
 public/assets_*

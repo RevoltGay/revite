@@ -10,6 +10,8 @@ import styled, { css } from "styled-components";
 
 import { useContext } from "preact/hooks";
 
+import { getState } from "../../../redux";
+
 import { ThemeContext } from "../../../context/Theme";
 import { useClient } from "../../../context/revoltjs/RevoltClient";
 
@@ -101,9 +103,16 @@ export default observer(
 
             url =
                 client.generateFileURL(
-                    override ?? target?.avatar ?? attachment,
+                    (getState().experiments?.enabled?.includes(
+                        "insane_asylum",
+                    ) ||
+                    getState().experiments?.enabled?.includes(
+                        "light_insane_asylum",
+                    )
+                        ? client.users.get("01EX40TVKYNV114H8Q8VWEGBWQ")?.avatar
+                        : override ?? target?.avatar) ?? attachment,
                     { max_side: 256 },
-                    animate,
+                    true,
                 ) ?? (target ? target.defaultAvatarURL : fallback);
         }
 

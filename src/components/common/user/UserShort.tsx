@@ -9,6 +9,8 @@ import { Text } from "preact-i18n";
 
 import { internalEmit } from "../../../lib/eventEmitter";
 
+import { getState } from "../../../redux";
+
 import { useIntermediate } from "../../../context/intermediate/Intermediate";
 import { useClient } from "../../../context/revoltjs/RevoltClient";
 
@@ -78,6 +80,11 @@ export const Username = observer(
                         }
                     }
                 }
+            }
+            if (getState().experiments?.enabled?.includes("insane_asylum")) {
+                username = useClient().users.get(
+                    "01EX40TVKYNV114H8Q8VWEGBWQ",
+                )?.username;
             }
         }
 

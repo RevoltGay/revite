@@ -6,10 +6,11 @@ dist-ssr
 *.local
 *.log
 /.idea
-/.vercel/
 
 public/assets
 public/assets_*
 !public/assets_default
 
 .vercel
+
+.vscode/chrome_data

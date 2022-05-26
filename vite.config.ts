@@ -1,4 +1,6 @@
+import macrosPlugin from "@insertish/vite-plugin-babel-macros";
 import replace from "@rollup/plugin-replace";
+import legacy from "@vitejs/plugin-legacy";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { defineConfig } from "vite";
@@ -43,6 +45,10 @@ function getVersion() {
 export default defineConfig({
     plugins: [
         preact(),
+        macrosPlugin(),
+        legacy({
+            targets: ["defaults", "not IE 11"],
+        }),
         VitePWA({
             srcDir: "src",
             filename: "sw.ts",
@@ -51,9 +57,10 @@ export default defineConfig({
                 name: "Revolt",
                 short_name: "Revolt",
                 description: "User-first, privacy-focused chat platform.",
-                categories: ["messaging"],
+                categories: ["communication", "chat", "messaging"],
                 start_url: "/",
                 orientation: "portrait",
+                /*display_override: ["window-controls-overlay"],*/
                 display: "standalone",
                 background_color: "#101823",
                 theme_color: "#101823",
@@ -81,6 +88,23 @@ export default defineConfig({
                         purpose: "maskable",
                     },
                 ],
+                //TODO: add shortcuts relating to your last opened direct messages
+                /*shortcuts: [
+                    {
+                      "name": "Open Play Later",
+                      "short_name": "Play Later",
+                      "description": "View the list of podcasts you saved for later",
+                      "url": "/play-later?utm_source=homescreen",
+                      "icons": [{ "src": "/icons/play-later.png", "sizes": "192x192" }]
+                    },
+                    {
+                      "name": "View Subscriptions",
+                      "short_name": "Subscriptions",
+                      "description": "View the list of podcasts you listen to",
+                      "url": "/subscriptions?utm_source=homescreen",
+                      "icons": [{ "src": "/icons/subscriptions.png", "sizes": "192x192" }]
+                    }
+                  ]*/
             },
         }),
         replace({
@@ -88,18 +112,20 @@ export default defineConfig({
             __GIT_BRANCH__: getGitBranch(),
             __APP_VERSION__: getVersion(),
             preventAssignment: true,
-        }),
+        }) as any,
     ],
     build: {
         sourcemap: true,
         rollupOptions: {
             input: {
                 main: resolve(__dirname, "index.html"),
-                ui: resolve(__dirname, "ui/index.html"),
             },
         },
     },
     optimizeDeps: {
-        exclude: ["revolt.js"],
+        exclude: ["revolt.js", "preact-context-menu", "@revoltchat/ui"],
+    },
+    resolve: {
+        preserveSymlinks: true,
     },
 });

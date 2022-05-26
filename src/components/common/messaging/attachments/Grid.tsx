@@ -1,12 +1,15 @@
-import styled from "styled-components";
+import styled from "styled-components/macro";
+
+import { Ref } from "preact";
 
 import { Children } from "../../../../types/Preact";
 
 const Grid = styled.div<{ width: number; height: number }>`
-    --width: ${props => props.width}px;
-    --height: ${props => props.height}px;
+    --width: ${(props) => props.width}px;
+    --height: ${(props) => props.height}px;
 
     display: grid;
+    overflow: hidden;
     aspect-ratio: ${(props) => props.width} / ${(props) => props.height};
 
     max-width: min(var(--width), var(--attachment-max-width));
@@ -42,7 +45,7 @@ const Grid = styled.div<{ width: number; height: number }>`
         overflow: hidden;
 
         object-fit: contain;
-        
+
         // It's something
         object-position: left;
     }
@@ -71,13 +74,14 @@ type Props = Omit<
     children?: Children;
     width: number;
     height: number;
+    innerRef?: Ref<any>;
 };
 
 export function SizedGrid(props: Props) {
-    const { width, height, children, ...divProps } = props;
+    const { width, height, children, innerRef, ...divProps } = props;
 
     return (
-        <Grid {...divProps} width={width} height={height}>
+        <Grid {...divProps} width={width} height={height} ref={innerRef}>
             {children}
         </Grid>
     );

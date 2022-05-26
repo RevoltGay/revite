@@ -11,11 +11,10 @@ import {
     MessageSquareEdit,
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
-import { SystemMessage as SystemMessageI } from "revolt-api/types/Channels";
-import { Message } from "revolt.js/dist/maps/Messages";
-import styled from "styled-components";
+import { Message, API } from "revolt.js";
+import styled from "styled-components/macro";
 
-import { attachContextMenu } from "preact-context-menu";
+import { useTriggerEvents } from "preact-context-menu";
 
 import { TextReact } from "../../../lib/i18n";
 
@@ -29,6 +28,17 @@ const SystemContent = styled.div`
     flex-wrap: wrap;
     align-items: center;
     flex-direction: row;
+    font-size: 14px;
+    color: var(--secondary-foreground);
+
+    span {
+        font-weight: 600;
+        color: var(--foreground);
+    }
+
+    svg {
+        margin-inline-end: 4px;
+    }
 
     svg,
     span {
@@ -64,13 +74,11 @@ export const SystemMessage = observer(
     ({ attachContext, message, highlight, hideInfo }: Props) => {
         const data = message.asSystemMessage;
         const SystemMessageIcon =
-            iconDictionary[data.type as SystemMessageI["type"]] ?? InfoCircle;
+            iconDictionary[data.type as API.SystemMessage["type"]] ??
+            InfoCircle;
 
-        let children;
+        let children = null;
         switch (data.type) {
-            case "text":
-                children = <span>{data.content}</span>;
-                break;
             case "user_added":
             case "user_remove":
                 children = (
@@ -127,16 +135,14 @@ export const SystemMessage = observer(
         return (
             <MessageBase
                 highlight={highlight}
-                onContextMenu={
-                    attachContext
-                        ? attachContextMenu("Menu", {
-                              message,
-                              contextualChannel: message.channel,
-                          })
-                        : undefined
-                }>
+                {...(attachContext
+                    ? useTriggerEvents("Menu", {
+                          message,
+                          contextualChannel: message.channel,
+                      })
+                    : undefined)}>
                 {!hideInfo && (
-                    <MessageInfo>
+                    <MessageInfo click={false}>
                         <MessageDetail message={message} position="left" />
                         <SystemMessageIcon className="systemIcon" />
                     </MessageInfo>

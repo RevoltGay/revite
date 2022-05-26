@@ -1,12 +1,14 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import styled, { css, keyframes } from "styled-components";
+import styled, { css, keyframes } from "styled-components/macro";
 
 import { createPortal, useCallback, useEffect, useState } from "preact/compat";
+
+import { Button } from "@revoltchat/ui";
+import { Props as ButtonProps } from "@revoltchat/ui/esm/components/design/atoms/inputs/Button";
 
 import { internalSubscribe } from "../../lib/eventEmitter";
 
 import { Children } from "../../types/Preact";
-import Button, { ButtonProps } from "./Button";
 
 const open = keyframes`
     0% {opacity: 0;}
@@ -80,7 +82,16 @@ const ModalContent = styled.div<
     h3 {
         font-size: 14px;
         text-transform: uppercase;
-        margin-top: 0;
+        margin: 0;
+        margin-bottom: 10px;
+        color: var(--foreground);
+    }
+
+    h5 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--secondary-foreground);
     }
 
     form {
@@ -95,6 +106,11 @@ const ModalContent = styled.div<
         }
     }
 
+    .description {
+        color: var(--tertiary-foreground);
+        font-size: 90%;
+    }
+
     ${(props) =>
         !props.noBackground &&
         css`
@@ -105,6 +121,7 @@ const ModalContent = styled.div<
         props.padding &&
         css`
             padding: 1rem;
+            min-width: 450px;
         `}
 
     ${(props) =>
@@ -130,7 +147,11 @@ const ModalActions = styled.div`
     border-radius: 0 0 var(--border-radius) var(--border-radius);
 `;
 
-export type Action = Omit<ButtonProps, "onClick"> & {
+export type Action = Omit<
+    JSX.HTMLAttributes<HTMLButtonElement>,
+    "as" | "onClick"
+> & {
+    palette?: ButtonProps["palette"];
     confirmation?: boolean;
     onClick: () => void;
 };
@@ -138,6 +159,7 @@ export type Action = Omit<ButtonProps, "onClick"> & {
 interface Props {
     children?: Children;
     title?: Children;
+    description?: Children;
 
     disallowClosing?: boolean;
     noBackground?: boolean;
@@ -147,6 +169,7 @@ interface Props {
     onClose?: () => void;
     actions?: Action[];
     disabled?: boolean;
+    palette?: ButtonProps["palette"];
     border?: boolean;
     visible: boolean;
 }
@@ -163,6 +186,8 @@ export default function Modal(props: Props) {
             border={props.border}
             padding={props.padding ?? !props.dontModal}>
             {props.title && <h3>{props.title}</h3>}
+
+            {props.description && <h5>{props.description}</h5>}
             {props.children}
         </ModalContent>
     );
@@ -223,6 +248,7 @@ export default function Modal(props: Props) {
                     <ModalActions>
                         {props.actions.map((x, index) => (
                             <Button
+                                palette={props.palette}
                                 key={index}
                                 {...x}
                                 disabled={props.disabled}

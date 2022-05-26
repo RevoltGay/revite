@@ -2,7 +2,8 @@ import { Refresh } from "@styled-icons/boxicons-regular";
 
 import { useEffect, useState } from "preact/hooks";
 
-import Button from "../../../components/ui/Button";
+import { Button } from "@revoltchat/ui";
+
 import Checkbox from "../../../components/ui/Checkbox";
 import Tip from "../../../components/ui/Tip";
 import CategoryButton from "../../../components/ui/fluent/CategoryButton";
@@ -44,6 +45,18 @@ export function Native() {
                 Start with computer
             </Checkbox>
 
+            <Checkbox
+                checked={config.minimiseToTray}
+                onChange={(minimiseToTray) => {
+                    window.native.set("minimiseToTray", minimiseToTray);
+                    setConfig({
+                        ...config,
+                        minimiseToTray,
+                    });
+                }}
+                description="Instead of closing, Revolt will hide in your tray.">
+                Minimise to Tray
+            </Checkbox>
             <Checkbox
                 checked={config.discordRPC}
                 onChange={(discordRPC) => {
@@ -117,14 +130,14 @@ export function Native() {
             </Checkbox>
             <p style={{ display: "flex", gap: "8px" }}>
                 <Button
-                    contrast
+                    palette="secondary"
                     compact
                     disabled={!hintReload}
                     onClick={window.native.reload}>
                     Reload Page
                 </Button>
                 <Button
-                    contrast
+                    palette="secondary"
                     compact
                     disabled={!hintRelaunch}
                     onClick={window.native.relaunch}>
@@ -136,7 +149,7 @@ export function Native() {
                 <>
                     <h5>Development mode is currently on.</h5>
                     <Button
-                        contrast
+                        palette="secondary"
                         compact
                         onClick={() => {
                             window.native.set("build", "stable");
@@ -162,13 +175,15 @@ export function Native() {
                                         the app will not load!
                                     </span>
                                 </b>
+                                <br />
+                                <code>yarn dev --port 3001</code>
                             </>
                         }>
                         I understand there's no going back.
                     </Checkbox>
                     <p>
                         <Button
-                            error
+                            palette="error"
                             compact
                             disabled={!confirmDev}
                             onClick={() => {

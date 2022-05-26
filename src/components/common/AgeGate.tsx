@@ -1,15 +1,16 @@
 import { observer } from "mobx-react-lite";
 import { useHistory } from "react-router-dom";
-import { Channel } from "revolt.js/dist/maps/Channels";
-import styled from "styled-components";
+import { Channel } from "revolt.js";
+import styled from "styled-components/macro";
 
 import { Text } from "preact-i18n";
 import { useState } from "preact/hooks";
 
+import { Button } from "@revoltchat/ui";
+
 import { useApplicationState } from "../../mobx/State";
 import { SECTION_NSFW } from "../../mobx/stores/Layout";
 
-import Button from "../ui/Button";
 import Checkbox from "../ui/Checkbox";
 
 import { Children } from "../../types/Preact";
@@ -85,11 +86,11 @@ export default observer((props: Props) => {
                 <Text id="app.main.channel.nsfw.confirm" />
             </Checkbox>
             <div className="actions">
-                <Button contrast onClick={() => history.goBack()}>
+                <Button palette="secondary" onClick={() => history.goBack()}>
                     <Text id="app.special.modals.actions.back" />
                 </Button>
                 <Button
-                    contrast
+                    palette="secondary"
                     onClick={() =>
                         layout.getSectionState(SECTION_NSFW) && setAgeGate(true)
                     }>

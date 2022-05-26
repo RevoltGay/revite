@@ -55,20 +55,17 @@ export function GenericSettings({
     indexHeader,
 }: Props) {
     const history = useHistory();
-    const theme = useApplicationState().settings.theme;
+    const state = useApplicationState();
+    const theme = state.settings.theme;
     const { page } = useParams<{ page: string }>();
 
     const [closing, setClosing] = useState(false);
     const exitSettings = useCallback(() => {
-        if (history.length > 1) {
-            setClosing(true);
+        setClosing(true);
 
-            setTimeout(() => {
-                history.goBack();
-            }, 100);
-        } else {
-            history.push("/");
-        }
+        setTimeout(() => {
+            history.replace(state.layout.getLastPath());
+        }, 200);
     }, [history]);
 
     useEffect(() => {
@@ -132,7 +129,11 @@ export function GenericSettings({
             )}
             {(!isTouchscreenDevice || typeof page === "undefined") && (
                 <div className={styles.sidebar}>
-                    <div className={styles.scrollbox}>
+                    <div
+                        className={styles.scrollbox}
+                        data-scroll-offset={
+                            isTouchscreenDevice ? "with-padding" : undefined
+                        }>
                         <div className={styles.container}>
                             {isTouchscreenDevice && indexHeader}
                             {pages.map((entry, i) =>

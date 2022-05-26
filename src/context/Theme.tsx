@@ -1,7 +1,8 @@
+// @ts-expect-error No typings.
 import rgba from "color-rgba";
 import { observer } from "mobx-react-lite";
 import { Helmet } from "react-helmet";
-import { createGlobalStyle } from "styled-components";
+import { createGlobalStyle } from "styled-components/macro";
 
 import { useEffect } from "preact/hooks";
 
@@ -27,6 +28,7 @@ export type Variables =
     | "secondary-header"
     | "tertiary-background"
     | "tertiary-foreground"
+    | "tooltip"
     | "status-online"
     | "status-away"
     | "status-busy"
@@ -43,17 +45,19 @@ export type HiddenVariables =
 
 export type Fonts =
     | "Open Sans"
+    | "OpenDyslexic"
     | "Inter"
     | "Atkinson Hyperlegible"
     | "Roboto"
     | "Noto Sans"
     | "Lato"
-    | "Bree Serif"
+    | "Bitter"
     | "Montserrat"
     | "Poppins"
     | "Raleway"
     | "Ubuntu"
-    | "Comic Neue";
+    | "Comic Neue"
+    | "Lexend";
 
 export type MonospaceFonts =
     | "Fira Code"
@@ -92,11 +96,22 @@ export const FONTS: Record<Fonts, { name: string; load: () => void }> = {
         load: async () => {
             await import("@fontsource/open-sans/300.css");
             await import("@fontsource/open-sans/400.css");
+            await import("@fontsource/open-sans/500.css");
             await import("@fontsource/open-sans/600.css");
             await import("@fontsource/open-sans/700.css");
             await import("@fontsource/open-sans/400-italic.css");
         },
     },
+
+    OpenDyslexic: {
+        name: "OpenDyslexic",
+        load: async () => {
+            await import("@fontsource/opendyslexic/400.css");
+            await import("@fontsource/opendyslexic/700.css");
+            await import("@fontsource/opendyslexic/400-italic.css");
+        },
+    },
+
     Inter: {
         name: "Inter",
         load: async () => {
@@ -130,9 +145,14 @@ export const FONTS: Record<Fonts, { name: string; load: () => void }> = {
             await import("@fontsource/noto-sans/400-italic.css");
         },
     },
-    "Bree Serif": {
-        name: "Bree Serif",
-        load: () => import("@fontsource/bree-serif/400.css"),
+    Bitter: {
+        name: "Bitter",
+        load: async () => {
+            await import("@fontsource/bitter/300.css");
+            await import("@fontsource/bitter/400.css");
+            await import("@fontsource/bitter/600.css");
+            await import("@fontsource/bitter/700.css");
+        },
     },
     Lato: {
         name: "Lato",
@@ -141,6 +161,14 @@ export const FONTS: Record<Fonts, { name: string; load: () => void }> = {
             await import("@fontsource/lato/400.css");
             await import("@fontsource/lato/700.css");
             await import("@fontsource/lato/400-italic.css");
+        },
+    },
+    Lexend: {
+        name: "Lexend",
+        load: async () => {
+            await import("@fontsource/lexend/300.css");
+            await import("@fontsource/lexend/400.css");
+            await import("@fontsource/lexend/700.css");
         },
     },
     Montserrat: {
@@ -241,6 +269,7 @@ export const PRESETS: Record<string, Theme> = {
         mention: "rgba(251, 255, 0, 0.40)",
         success: "#65E572",
         warning: "#FAA352",
+        tooltip: "#FFF",
         error: "#ED4245",
         hover: "rgba(0, 0, 0, 0.2)",
         "scrollbar-thumb": "#CA525A",
@@ -267,6 +296,7 @@ export const PRESETS: Record<string, Theme> = {
         mention: "rgba(251, 255, 0, 0.06)",
         success: "#65E572",
         warning: "#FAA352",
+        tooltip: "#000000",
         error: "#ED4245",
         hover: "rgba(0, 0, 0, 0.1)",
         "scrollbar-thumb": "#CA525A",
@@ -290,6 +320,14 @@ const GlobalTheme = createGlobalStyle<{ theme: Theme }>`
 :root {
 	${(props) => generateVariables(props.theme)}
 }
+
+${(props) =>
+    props.theme["min-opacity"] === 1 &&
+    `
+        * {
+            backdrop-filter: unset !important;
+        }
+    `}
 `;
 
 export const generateVariables = (theme: Theme) => {
@@ -312,13 +350,21 @@ export default observer(() => {
     useEffect(() => {
         const font = theme.getFont() ?? DEFAULT_FONT;
         root.setProperty("--font", `"${font}"`);
-        FONTS[font].load();
+        try {
+            FONTS[font]?.load();
+        } catch (err) {
+            console.error(`Failed to load font: ${font}`);
+        }
     }, [root, theme.getFont()]);
 
     useEffect(() => {
         const font = theme.getMonospaceFont() ?? DEFAULT_MONO_FONT;
         root.setProperty("--monospace-font", `"${font}"`);
-        MONOSPACE_FONTS[font].load();
+        try {
+            MONOSPACE_FONTS[font]?.load();
+        } catch (err) {
+            console.error(`Failed to load monospace font: ${font}`);
+        }
     }, [root, theme.getMonospaceFont()]);
 
     useEffect(() => {

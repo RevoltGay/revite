@@ -9,13 +9,13 @@ import {
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { Link, useHistory } from "react-router-dom";
-import { Profile, RelationshipStatus } from "revolt-api/types/Users";
-import { UserPermission } from "revolt.js/dist/api/permissions";
-import { Route } from "revolt.js/dist/api/routes";
+import { UserPermission, API } from "revolt.js";
 
 import styles from "./UserProfile.module.scss";
 import { Localizer, Text } from "preact-i18n";
 import { useContext, useEffect, useLayoutEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import { noop } from "../../../lib/js";
 
@@ -26,7 +26,6 @@ import UserBadges from "../../../components/common/user/UserBadges";
 import UserIcon from "../../../components/common/user/UserIcon";
 import { Username } from "../../../components/common/user/UserShort";
 import UserStatus from "../../../components/common/user/UserStatus";
-import Button from "../../../components/ui/Button";
 import IconButton from "../../../components/ui/IconButton";
 import Modal from "../../../components/ui/Modal";
 import Overline from "../../../components/ui/Overline";
@@ -44,18 +43,18 @@ interface Props {
     user_id: string;
     dummy?: boolean;
     onClose?: () => void;
-    dummyProfile?: Profile;
+    dummyProfile?: API.UserProfile;
 }
 
 export const UserProfile = observer(
     ({ user_id, onClose, dummy, dummyProfile }: Props) => {
         const { openScreen, writeClipboard } = useIntermediate();
 
-        const [profile, setProfile] = useState<undefined | null | Profile>(
-            undefined,
-        );
+        const [profile, setProfile] = useState<
+            undefined | null | API.UserProfile
+        >(undefined);
         const [mutual, setMutual] = useState<
-            undefined | null | Route<"GET", "/users/id/mutual">["response"]
+            undefined | null | API.MutualResponse
         >(undefined);
         const [isPublicBot, setIsPublicBot] = useState<
             undefined | null | boolean
@@ -139,7 +138,11 @@ export const UserProfile = observer(
 
         const backgroundURL =
             profile &&
-            client.generateFileURL(profile.background, { width: 1000 }, true);
+            client.generateFileURL(
+                profile.background as any,
+                { width: 1000 },
+                true,
+            );
 
         const badges = user.badges ?? 0;
         const flags = user.flags ?? 0;
@@ -193,12 +196,15 @@ export const UserProfile = observer(
                         </div>
                         {isPublicBot && (
                             <Link to={`/bot/${user._id}`}>
-                                <Button accent compact onClick={onClose}>
+                                <Button
+                                    palette="accent"
+                                    compact
+                                    onClick={onClose}>
                                     Add to server
                                 </Button>
                             </Link>
                         )}
-                        {user.relationship === RelationshipStatus.Friend && (
+                        {user.relationship === "Friend" && (
                             <Localizer>
                                 <Tooltip
                                     content={
@@ -214,28 +220,26 @@ export const UserProfile = observer(
                                 </Tooltip>
                             </Localizer>
                         )}
-                        {user.relationship === RelationshipStatus.User &&
-                            !dummy && (
-                                <IconButton
-                                    onClick={() => {
-                                        onClose?.();
-                                        history.push(`/settings/profile`);
-                                    }}>
-                                    <Edit size={28} />
-                                </IconButton>
-                            )}
+                        {user.relationship === "User" && !dummy && (
+                            <IconButton
+                                onClick={() => {
+                                    onClose?.();
+                                    history.push(`/settings/profile`);
+                                }}>
+                                <Edit size={28} />
+                            </IconButton>
+                        )}
                         {!user.bot &&
                             flags != 2 &&
                             flags != 4 &&
-                            (user.relationship ===
-                                RelationshipStatus.Incoming ||
-                                user.relationship ===
-                                    RelationshipStatus.None) && (
+                            (user.relationship === "Incoming" ||
+                                user.relationship === "None" ||
+                                user.relationship === null) && (
                                 <IconButton onClick={() => user.addFriend()}>
                                     <UserPlus size={28} />
                                 </IconButton>
                             )}
-                        {user.relationship === RelationshipStatus.Outgoing && (
+                        {user.relationship === "Outgoing" && (
                             <IconButton onClick={() => user.removeFriend()}>
                                 <UserX size={28} />
                             </IconButton>
@@ -247,7 +251,7 @@ export const UserProfile = observer(
                             onClick={() => setTab("profile")}>
                             <Text id="app.special.popovers.user_profile.profile" />
                         </div>
-                        {user.relationship !== RelationshipStatus.User && (
+                        {user.relationship !== "User" && (
                             <>
                                 <div
                                     data-active={tab === "friends"}
@@ -338,7 +342,9 @@ export const UserProfile = observer(
                                         <Text id="app.special.popovers.user_profile.sub.information" />
                                     </div>
                                 )}
-                                <Markdown content={profile?.content} />
+                                <div className={styles.markdown}>
+                                    <Markdown content={profile?.content} />
+                                </div>
                                 {/*<div className={styles.category}><Text id="app.special.popovers.user_profile.sub.connections" /></div>*/}
                             </div>
                         ) : (
@@ -371,6 +377,7 @@ export const UserProfile = observer(
                                                     <UserIcon
                                                         size={32}
                                                         target={x}
+                                                        status
                                                     />
                                                     <span>{x.username}</span>
                                                 </div>

@@ -1,14 +1,14 @@
 import { Group } from "@styled-icons/boxicons-solid";
-import { autorun } from "mobx";
+import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { useHistory } from "react-router-dom";
-import { RetrievedInvite } from "revolt-api/types/Invites";
-import { Message } from "revolt.js/dist/maps/Messages";
-import styled, { css } from "styled-components";
+import { Message, API } from "revolt.js";
+import styled, { css } from "styled-components/macro";
 
 import { useContext, useEffect, useState } from "preact/hooks";
 
-import { defer } from "../../../../lib/defer";
+import { Button } from "@revoltchat/ui";
+
 import { isTouchscreenDevice } from "../../../../lib/isTouchscreenDevice";
 
 import {
@@ -19,7 +19,6 @@ import {
 import { takeError } from "../../../../context/revoltjs/util";
 
 import ServerIcon from "../../../../components/common/ServerIcon";
-import Button from "../../../../components/ui/Button";
 import Overline from "../../../ui/Overline";
 import Preloader from "../../../ui/Preloader";
 
@@ -85,9 +84,9 @@ export function EmbedInvite({ code }: Props) {
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [joinError, setJoinError] = useState<string | undefined>(undefined);
-    const [invite, setInvite] = useState<RetrievedInvite | undefined>(
-        undefined,
-    );
+    const [invite, setInvite] = useState<
+        (API.InviteResponse & { type: "Server" }) | undefined
+    >(undefined);
 
     useEffect(() => {
         if (
@@ -96,7 +95,9 @@ export function EmbedInvite({ code }: Props) {
         ) {
             client
                 .fetchInvite(code)
-                .then((data) => setInvite(data))
+                .then((data) =>
+                    setInvite(data as API.InviteResponse & { type: "Server" }),
+                )
                 .catch((err) => setError(takeError(err)));
         }
     }, [client, code, invite, status]);
@@ -139,40 +140,17 @@ export function EmbedInvite({ code }: Props) {
                 ) : (
                     <Button
                         onClick={async () => {
+                            setProcessing(true);
+
                             try {
-                                setProcessing(true);
+                                await client.joinInvite(invite);
 
-                                if (invite.type === "Server") {
-                                    if (client.servers.get(invite.server_id)) {
-                                        history.push(
-                                            `/server/${invite.server_id}/channel/${invite.channel_id}`,
-                                        );
-                                    }
-
-                                    const dispose = autorun(() => {
-                                        const server = client.servers.get(
-                                            invite.server_id,
-                                        );
-
-                                        defer(() => {
-                                            if (server) {
-                                                client.unreads!.markMultipleRead(
-                                                    server.channel_ids,
-                                                );
-
-                                                history.push(
-                                                    `/server/${server._id}/channel/${invite.channel_id}`,
-                                                );
-                                            }
-                                        });
-
-                                        dispose();
-                                    });
-                                }
-
-                                await client.joinInvite(code);
+                                history.push(
+                                    `/server/${invite.server_id}/channel/${invite.channel_id}`,
+                                );
                             } catch (err) {
                                 setJoinError(takeError(err));
+                            } finally {
                                 setProcessing(false);
                             }
                         }}>
@@ -213,9 +191,12 @@ export default observer(({ message }: { message: Message }) => {
 
         return (
             <>
-                {entries.map((entry) => (
-                    <EmbedInvite key={entry} code={entry} />
-                ))}
+                {entries.map(
+                    (entry) =>
+                        entry !== "discover" && (
+                            <EmbedInvite key={entry} code={entry} />
+                        ),
+                )}
             </>
         );
     }

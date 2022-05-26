@@ -1,4 +1,4 @@
-import { At, Key, Block, ListOl } from "@styled-icons/boxicons-regular";
+import { At, Key, Block } from "@styled-icons/boxicons-regular";
 import {
     Envelope,
     HelpCircle,
@@ -8,11 +8,13 @@ import {
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { useHistory } from "react-router-dom";
-import { Profile } from "revolt-api/types/Users";
+import { API } from "revolt.js";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useContext, useEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import { stopPropagation } from "../../../lib/stopPropagation";
 
@@ -25,7 +27,6 @@ import {
 
 import Tooltip from "../../../components/common/Tooltip";
 import UserIcon from "../../../components/common/user/UserIcon";
-import Button from "../../../components/ui/Button";
 import Tip from "../../../components/ui/Tip";
 import CategoryButton from "../../../components/ui/fluent/CategoryButton";
 
@@ -37,7 +38,9 @@ export const Account = observer(() => {
 
     const [email, setEmail] = useState("...");
     const [revealEmail, setRevealEmail] = useState(false);
-    const [profile, setProfile] = useState<undefined | Profile>(undefined);
+    const [profile, setProfile] = useState<undefined | API.UserProfile>(
+        undefined,
+    );
     const history = useHistory();
 
     function switchPage(to: string) {
@@ -46,8 +49,8 @@ export const Account = observer(() => {
 
     useEffect(() => {
         if (email === "..." && status === ClientStatus.ONLINE) {
-            client
-                .req("GET", "/auth/account")
+            client.api
+                .get("/auth/account/")
                 .then((account) => setEmail(account.email));
         }
 
@@ -99,7 +102,9 @@ export const Account = observer(() => {
                     </div>
                 </div>
 
-                <Button onClick={() => switchPage("profile")} contrast>
+                <Button
+                    onClick={() => switchPage("profile")}
+                    palette="secondary">
                     <Text id="app.settings.pages.profile.edit_profile" />
                 </Button>
             </div>

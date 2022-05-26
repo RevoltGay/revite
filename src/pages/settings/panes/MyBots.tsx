@@ -1,15 +1,17 @@
+// ! FIXME: this code is garbage, need to replace
 import { Key, Clipboard, Globe, Plus } from "@styled-icons/boxicons-regular";
 import { LockAlt, HelpCircle } from "@styled-icons/boxicons-solid";
 import type { AxiosError } from "axios";
 import { observer } from "mobx-react-lite";
-import { Bot } from "revolt-api/types/Bots";
-import { Profile as ProfileI } from "revolt-api/types/Users";
-import { User } from "revolt.js/dist/maps/Users";
-import styled from "styled-components";
+import { API } from "revolt.js";
+import { User } from "revolt.js";
+import styled from "styled-components/macro";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useCallback, useEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
 import { internalEmit } from "../../../lib/eventEmitter";
@@ -26,7 +28,6 @@ import AutoComplete, {
 import CollapsibleSection from "../../../components/common/CollapsibleSection";
 import Tooltip from "../../../components/common/Tooltip";
 import UserIcon from "../../../components/common/user/UserIcon";
-import Button from "../../../components/ui/Button";
 import Checkbox from "../../../components/ui/Checkbox";
 import InputBox from "../../../components/ui/InputBox";
 import Tip from "../../../components/ui/Tip";
@@ -43,7 +44,7 @@ interface Changes {
     name?: string;
     public?: boolean;
     interactions_url?: string;
-    remove?: "InteractionsURL";
+    remove?: "InteractionsURL"[];
 }
 
 const BotBadge = styled.div`
@@ -62,7 +63,7 @@ const BotBadge = styled.div`
 `;
 
 interface Props {
-    bot: Bot;
+    bot: API.Bot;
     onDelete(): void;
     onUpdate(changes: Changes): void;
 }
@@ -75,7 +76,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
         _id: bot._id,
         username: user.username,
         public: bot.public,
-        interactions_url: bot.interactions_url,
+        interactions_url: bot.interactions_url as any,
     });
     const [error, setError] = useState<string | JSX.Element>("");
     const [saving, setSaving] = useState(false);
@@ -87,23 +88,21 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
         useState<HTMLInputElement | null>(null);
     const { writeClipboard, openScreen } = useIntermediate();
 
-    const [profile, setProfile] = useState<undefined | ProfileI>(undefined);
+    const [profile, setProfile] = useState<undefined | API.UserProfile>(
+        undefined,
+    );
 
     const refreshProfile = useCallback(() => {
-        client
-            .request(
-                "GET",
-                `/users/${bot._id}/profile` as "/users/id/profile",
-                {
-                    headers: { "x-bot-token": bot.token },
-                    transformRequest: (data, headers) => {
-                        // Remove user headers for this request
-                        delete headers["x-user-id"];
-                        delete headers["x-session-token"];
-                        return data;
-                    },
+        client.api
+            .get(`/users/${bot._id as ""}/profile`, undefined, {
+                headers: { "x-bot-token": bot.token },
+                transformRequest: (data, headers) => {
+                    // Remove user headers for this request
+                    delete headers?.["x-user-id"];
+                    delete headers?.["x-session-token"];
+                    return data;
                 },
-            )
+            })
             .then((profile) => setProfile(profile ?? {}));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, setProfile]);
@@ -122,14 +121,14 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
         const changes: Changes = {};
         if (data.username !== user!.username) changes.name = data.username;
         if (data.public !== bot.public) changes.public = data.public;
-        if (data.interactions_url === "") changes.remove = "InteractionsURL";
+        if (data.interactions_url === "") changes.remove = ["InteractionsURL"];
         else if (data.interactions_url !== bot.interactions_url)
             changes.interactions_url = data.interactions_url;
         setSaving(true);
         setError("");
         try {
             await client.bots.edit(bot._id, changes);
-            if (changed) await editBotContent(profile?.content);
+            if (changed) await editBotContent(profile?.content ?? undefined);
             onUpdate(changes);
             setChanged(false);
             setEditMode(false);
@@ -152,19 +151,22 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
     async function editBotAvatar(avatar?: string) {
         setSaving(true);
         setError("");
-        await client.request("PATCH", "/users/id", {
-            headers: { "x-bot-token": bot.token },
-            transformRequest: (data, headers) => {
-                // Remove user headers for this request
-                delete headers["x-user-id"];
-                delete headers["x-session-token"];
-                return data;
+        await client.api.patch(
+            "/users/@me",
+            avatar ? { avatar } : { remove: ["Avatar"] },
+            {
+                headers: { "x-bot-token": bot.token },
+                transformRequest: (data, headers) => {
+                    // Remove user headers for this request
+                    delete headers?.["x-user-id"];
+                    delete headers?.["x-session-token"];
+                    return JSON.stringify(data);
+                },
             },
-            data: JSON.stringify(avatar ? { avatar } : { remove: "Avatar" }),
-        });
+        );
 
         const res = await client.bots.fetch(bot._id);
-        if (!avatar) res.user.update({}, "Avatar");
+        if (!avatar) res.user.update({}, ["Avatar"]);
         setUser(res.user);
         setSaving(false);
     }
@@ -172,20 +174,21 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
     async function editBotBackground(background?: string) {
         setSaving(true);
         setError("");
-        await client.request("PATCH", "/users/id", {
-            headers: { "x-bot-token": bot.token },
-            transformRequest: (data, headers) => {
-                // Remove user headers for this request
-                delete headers["x-user-id"];
-                delete headers["x-session-token"];
-                return data;
+        await client.api.patch(
+            "/users/@me",
+            background
+                ? { profile: { background } }
+                : { remove: ["ProfileBackground"] },
+            {
+                headers: { "x-bot-token": bot.token },
+                transformRequest: (data, headers) => {
+                    // Remove user headers for this request
+                    delete headers?.["x-user-id"];
+                    delete headers?.["x-session-token"];
+                    return JSON.stringify(data);
+                },
             },
-            data: JSON.stringify(
-                background
-                    ? { profile: { background } }
-                    : { remove: "ProfileBackground" },
-            ),
-        });
+        );
 
         if (!background) setProfile({ ...profile, background: undefined });
         else refreshProfile();
@@ -195,20 +198,19 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
     async function editBotContent(content?: string) {
         setSaving(true);
         setError("");
-        await client.request("PATCH", "/users/id", {
-            headers: { "x-bot-token": bot.token },
-            transformRequest: (data, headers) => {
-                // Remove user headers for this request
-                delete headers["x-user-id"];
-                delete headers["x-session-token"];
-                return data;
+        await client.api.patch(
+            "/users/@me",
+            content ? { profile: { content } } : { remove: ["ProfileContent"] },
+            {
+                headers: { "x-bot-token": bot.token },
+                transformRequest: (data, headers) => {
+                    // Remove user headers for this request
+                    delete headers?.["x-user-id"];
+                    delete headers?.["x-session-token"];
+                    return data;
+                },
             },
-            data: JSON.stringify(
-                content
-                    ? { profile: { content } }
-                    : { remove: "ProfileContent" },
-            ),
-        });
+        );
 
         if (!content) setProfile({ ...profile, content: undefined });
         else refreshProfile();
@@ -295,6 +297,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                             </div>
                         ) : (
                             <InputBox
+                                style={{ width: "100%" }}
                                 ref={setUsernameRef}
                                 value={data.username}
                                 disabled={saving}
@@ -333,7 +336,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                                 _id: bot._id,
                                 username: user!.username,
                                 public: bot.public,
-                                interactions_url: bot.interactions_url,
+                                interactions_url: bot.interactions_url as any,
                             });
                             usernameRef!.value = user!.username;
                             interactionsRef!.value = bot.interactions_url || "";
@@ -341,7 +344,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                             setEditMode(false);
                         } else setEditMode(true);
                     }}
-                    contrast>
+                    palette="secondary">
                     <Text
                         id={`app.special.modals.actions.${
                             editMode ? "cancel" : "edit"
@@ -477,7 +480,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                             <Text id="app.special.modals.actions.save" />
                         </Button>
                         <Button
-                            error
+                            palette="error"
                             onClick={async () => {
                                 setSaving(true);
                                 openScreen({
@@ -521,7 +524,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
 
 export const MyBots = observer(() => {
     const client = useClient();
-    const [bots, setBots] = useState<Bot[] | undefined>(undefined);
+    const [bots, setBots] = useState<API.Bot[] | undefined>(undefined);
 
     useEffect(() => {
         client.bots.fetchOwned().then(({ bots }) => setBots(bots));
@@ -581,8 +584,9 @@ export const MyBots = observer(() => {
                                                 x.interactions_url =
                                                     changes.interactions_url;
                                             if (
-                                                changes.remove ===
-                                                "InteractionsURL"
+                                                changes.remove?.includes(
+                                                    "InteractionsURL",
+                                                )
                                             )
                                                 x.interactions_url = undefined;
                                         }

@@ -1,17 +1,20 @@
+import { Markdown } from "@styled-icons/boxicons-logos";
 import isEqual from "lodash.isequal";
 import { observer } from "mobx-react-lite";
-import { Server } from "revolt.js/dist/maps/Servers";
+import { Server } from "revolt.js";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useEffect, useState } from "preact/hooks";
 
+import { Button } from "@revoltchat/ui";
+
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
+import { noop } from "../../../lib/js";
 
 import { FileUploader } from "../../../context/revoltjs/FileUploads";
 import { getChannelName } from "../../../context/revoltjs/util";
 
-import Button from "../../../components/ui/Button";
 import ComboBox from "../../../components/ui/ComboBox";
 import InputBox from "../../../components/ui/InputBox";
 
@@ -59,9 +62,9 @@ export const Overview = observer(({ server }: Props) => {
                     fileType="icons"
                     behaviour="upload"
                     maxFileSize={2_500_000}
-                    onUpload={(icon) => server.edit({ icon })}
+                    onUpload={(icon) => server.edit({ icon }).then(noop)}
                     previewURL={server.generateIconURL({ max_side: 256 }, true)}
-                    remove={() => server.edit({ remove: "Icon" })}
+                    remove={() => server.edit({ remove: ["Icon"] }).then(noop)}
                 />
                 <div className={styles.name}>
                     <h3>
@@ -84,7 +87,7 @@ export const Overview = observer(({ server }: Props) => {
             </h3>
             <TextAreaAutoSize
                 maxRows={10}
-                minHeight={60}
+                minHeight={120}
                 maxLength={1024}
                 value={description}
                 placeholder={"Add a topic..."}
@@ -93,6 +96,19 @@ export const Overview = observer(({ server }: Props) => {
                     if (!changed) setChanged(true);
                 }}
             />
+            <div className={styles.markdown}>
+                <Markdown size="24" />
+                <h5>
+                    Descriptions support Markdown formatting,{" "}
+                    <a
+                        href="https://developers.revolt.chat/markdown"
+                        target="_blank"
+                        rel="noreferrer">
+                        learn more here
+                    </a>
+                    .
+                </h5>
+            </div>
             <hr />
             <h3>
                 <Text id="app.main.servers.custom_banner" />
@@ -103,9 +119,9 @@ export const Overview = observer(({ server }: Props) => {
                 fileType="banners"
                 behaviour="upload"
                 maxFileSize={6_000_000}
-                onUpload={(banner) => server.edit({ banner })}
+                onUpload={(banner) => server.edit({ banner }).then(noop)}
                 previewURL={server.generateBannerURL({ width: 1000 }, true)}
-                remove={() => server.edit({ remove: "Banner" })}
+                remove={() => server.edit({ remove: ["Banner"] }).then(noop)}
             />
             <hr />
             <h3>
@@ -167,7 +183,7 @@ export const Overview = observer(({ server }: Props) => {
             ))}
 
             <p>
-                <Button onClick={save} contrast disabled={!changed}>
+                <Button onClick={save} palette="secondary" disabled={!changed}>
                     <Text id="app.special.modals.actions.save" />
                 </Button>
             </p>

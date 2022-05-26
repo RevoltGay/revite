@@ -15,14 +15,14 @@ import {
     User,
     Megaphone,
     Speaker,
-    Store,
+    Plug,
     Bot,
     Trash,
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { Route, Switch, useHistory } from "react-router-dom";
 import { LIBRARY_VERSION } from "revolt.js";
-import styled from "styled-components";
+import styled from "styled-components/macro";
 
 import styles from "./Settings.module.scss";
 import { openContextMenu } from "preact-context-menu";
@@ -53,10 +53,10 @@ import { Languages } from "./panes/Languages";
 import { MyBots } from "./panes/MyBots";
 import { Native } from "./panes/Native";
 import { Notifications } from "./panes/Notifications";
+import { PluginsPage } from "./panes/Plugins";
 import { Profile } from "./panes/Profile";
 import { Sessions } from "./panes/Sessions";
 import { Sync } from "./panes/Sync";
-import { ThemeShop } from "./panes/ThemeShop";
 
 const AccountHeader = styled.div`
     display: flex;
@@ -164,6 +164,12 @@ export default observer(() => {
                     title: <Text id="app.settings.pages.appearance.title" />,
                 },
                 {
+                    id: "plugins",
+                    icon: <Plug size={20} />,
+                    title: <Text id="app.settings.pages.plugins.title" />,
+                    hidden: !experiments.isEnabled("plugins"),
+                },
+                {
                     id: "notifications",
                     icon: <Bell size={20} />,
                     title: <Text id="app.settings.pages.notifications.title" />,
@@ -190,18 +196,11 @@ export default observer(() => {
                     title: <Text id="app.settings.pages.experiments.title" />,
                 },
                 {
-                    divider: !experiments.isEnabled("theme_shop"),
+                    divider: true,
                     category: "revolt",
                     id: "bots",
                     icon: <Bot size={20} />,
                     title: <Text id="app.settings.pages.bots.title" />,
-                },
-                {
-                    hidden: !experiments.isEnabled("theme_shop"),
-                    divider: true,
-                    id: "theme_shop",
-                    icon: <Store size={20} />,
-                    title: <Text id="app.settings.pages.theme_shop.title" />,
                 },
                 {
                     id: "feedback",
@@ -221,6 +220,9 @@ export default observer(() => {
                     </Route>
                     <Route path="/settings/appearance">
                         <Appearance />
+                    </Route>
+                    <Route path="/settings/plugins">
+                        <PluginsPage />
                     </Route>
                     <Route path="/settings/audio">
                         <Audio />
@@ -243,11 +245,6 @@ export default observer(() => {
                     <Route path="/settings/bots">
                         <MyBots />
                     </Route>
-                    {experiments.isEnabled("theme_shop") && (
-                        <Route path="/settings/theme_shop">
-                            <ThemeShop />
-                        </Route>
-                    )}
                     <Route path="/settings/feedback">
                         <Feedback />
                     </Route>
@@ -350,7 +347,9 @@ export default observer(() => {
                             <Trash
                                 size={24}
                                 onClick={() =>
-                                    client.users.edit({ remove: "StatusText" })
+                                    client.users.edit({
+                                        remove: ["StatusText"],
+                                    })
                                 }
                             />
                         )}

@@ -1,11 +1,13 @@
 import { ArrowBack } from "@styled-icons/boxicons-regular";
 import { autorun } from "mobx";
 import { Redirect, useHistory, useParams } from "react-router-dom";
-import { RetrievedInvite } from "revolt-api/types/Invites";
+import { API } from "revolt.js";
 
 import styles from "./Invite.module.scss";
 import { Text } from "preact-i18n";
 import { useContext, useEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import { defer } from "../../lib/defer";
 import { TextReact } from "../../lib/i18n";
@@ -22,7 +24,6 @@ import { takeError } from "../../context/revoltjs/util";
 
 import ServerIcon from "../../components/common/ServerIcon";
 import UserIcon from "../../components/common/user/UserIcon";
-import Button from "../../components/ui/Button";
 import Overline from "../../components/ui/Overline";
 import Preloader from "../../components/ui/Preloader";
 
@@ -30,11 +31,13 @@ export default function Invite() {
     const history = useHistory();
     const client = useContext(AppContext);
 
+    const layout = useApplicationState().layout;
+
     const status = useContext(StatusContext);
     const { code } = useParams<{ code: string }>();
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
-    const [invite, setInvite] = useState<RetrievedInvite | undefined>(
+    const [invite, setInvite] = useState<API.InviteResponse | undefined>(
         undefined,
     );
 
@@ -47,7 +50,7 @@ export default function Invite() {
         }
     }, [client, code, invite, status]);
 
-    if (code === undefined) return <Redirect to="/" />;
+    if (code === undefined) return <Redirect to={layout.getLastPath()} />;
 
     if (typeof invite === "undefined") {
         return (
@@ -69,10 +72,14 @@ export default function Invite() {
                                     <Text id="app.special.invite.invalid_desc" />
                                 </h2>
                                 <div style="cursor: pointer;">
-                                    <Button contrast>
+                                    <Button palette="secondary">
                                         <ArrowBack
                                             size={32}
-                                            onClick={() => history.push("/")}
+                                            onClick={() =>
+                                                history.push(
+                                                    layout.getLastPath(),
+                                                )
+                                            }
                                         />
                                     </Button>
                                 </div>
@@ -86,6 +93,8 @@ export default function Invite() {
         );
     }
 
+    if (invite.type === "Group") return <h1>unimplemented</h1>;
+
     return (
         <div
             className={styles.invite}
@@ -95,7 +104,10 @@ export default function Invite() {
                     : undefined,
             }}>
             <div className={styles.leave}>
-                <ArrowBack size={32} onClick={() => history.push("/")} />
+                <ArrowBack
+                    size={32}
+                    onClick={() => history.push(layout.getLastPath())}
+                />
             </div>
 
             {!processing && (
@@ -141,48 +153,23 @@ export default function Invite() {
                         </h3>
                         <Overline type="error" error={error} />
                         <Button
-                            contrast
+                            palette="secondary"
                             onClick={async () => {
                                 if (status === ClientStatus.READY) {
                                     return history.push("/");
                                 }
 
+                                setProcessing(true);
+
                                 try {
-                                    setProcessing(true);
+                                    await client.joinInvite(invite);
 
-                                    if (invite.type === "Server") {
-                                        if (
-                                            client.servers.get(invite.server_id)
-                                        ) {
-                                            history.push(
-                                                `/server/${invite.server_id}/channel/${invite.channel_id}`,
-                                            );
-                                        }
-
-                                        const dispose = autorun(() => {
-                                            const server = client.servers.get(
-                                                invite.server_id,
-                                            );
-
-                                            defer(() => {
-                                                if (server) {
-                                                    client.unreads!.markMultipleRead(
-                                                        server.channel_ids,
-                                                    );
-
-                                                    history.push(
-                                                        `/server/${server._id}/channel/${invite.channel_id}`,
-                                                    );
-                                                }
-                                            });
-
-                                            dispose();
-                                        });
-                                    }
-
-                                    await client.joinInvite(code);
+                                    history.push(
+                                        `/server/${invite.server_id}/channel/${invite.channel_id}`,
+                                    );
                                 } catch (err) {
                                     setError(takeError(err));
+                                } finally {
                                     setProcessing(false);
                                 }
                             }}>

@@ -1,11 +1,8 @@
-import { MicrophoneOff } from "@styled-icons/boxicons-regular";
-import { VolumeMute } from "@styled-icons/boxicons-solid";
+import { VolumeMute, MicrophoneOff } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { useParams } from "react-router-dom";
-import { Masquerade } from "revolt-api/types/Channels";
-import { Presence } from "revolt-api/types/Users";
-import { User } from "revolt.js/dist/maps/Users";
-import styled, { css } from "styled-components";
+import { User, API } from "revolt.js";
+import styled, { css } from "styled-components/macro";
 
 import { useApplicationState } from "../../../mobx/State";
 
@@ -19,17 +16,17 @@ type VoiceStatus = "muted" | "deaf";
 interface Props extends IconBaseProps<User> {
     status?: boolean;
     voice?: VoiceStatus;
-    masquerade?: Masquerade;
+    masquerade?: API.Masquerade;
     showServerIdentity?: boolean;
 }
 
 export function useStatusColour(user?: User) {
     const theme = useApplicationState().settings.theme;
 
-    return user?.online && user?.status?.presence !== Presence.Invisible
-        ? user?.status?.presence === Presence.Idle
+    return user?.online && user?.status?.presence !== "Invisible"
+        ? user?.status?.presence === "Idle"
             ? theme.getVariable("status-away")
-            : user?.status?.presence === Presence.Busy
+            : user?.status?.presence === "Busy"
             ? theme.getVariable("status-busy")
             : theme.getVariable("status-online")
         : theme.getVariable("status-invisible");
@@ -43,10 +40,6 @@ const VoiceIndicator = styled.div<{ status: VoiceStatus }>`
     display: flex;
     align-items: center;
     justify-content: center;
-
-    svg {
-        stroke: white;
-    }
 
     ${(props) =>
         (props.status === "muted" || props.status === "deaf") &&
@@ -75,12 +68,13 @@ export default observer(
             hover,
             showServerIdentity,
             masquerade,
+            innerRef,
             ...svgProps
         } = props;
 
         let { url } = props;
         if (masquerade?.avatar) {
-            url = masquerade.avatar;
+            url = client.proxyFile(masquerade.avatar);
         } else if (!url) {
             let override;
             if (target && showServerIdentity) {
@@ -102,15 +96,17 @@ export default observer(
                     (useApplicationState().experiments.isEnabled("insane_asylum") ||
                     useApplicationState().experiments.isEnabled("light_insane_asylum")
                         ? client.users.get("01EX40TVKYNV114H8Q8VWEGBWQ")?.avatar
-                        : override ?? target?.avatar) ?? attachment,
+                        : override ?? target?.avatar ?? undefined) ?? attachment ?? undefined,
                     { max_side: 256 },
-                    true,
+                    // todo(rvgay): make experiment toggle
+                    animate,
                 ) ?? (target ? target.defaultAvatarURL : fallback);
         }
 
         return (
             <IconBase
                 {...svgProps}
+                ref={innerRef}
                 width={size}
                 height={size}
                 hover={hover}

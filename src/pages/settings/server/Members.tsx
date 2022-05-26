@@ -2,16 +2,17 @@ import { ChevronDown } from "@styled-icons/boxicons-regular";
 import { isEqual } from "lodash";
 import { observer } from "mobx-react-lite";
 import { Virtuoso } from "react-virtuoso";
-import { Member } from "revolt.js/dist/maps/Members";
-import { Server } from "revolt.js/dist/maps/Servers";
+import { Member } from "revolt.js";
+import { Server } from "revolt.js";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useEffect, useMemo, useState } from "preact/hooks";
 
+import { Button, Preloader } from "@revoltchat/ui";
+
 import UserIcon from "../../../components/common/user/UserIcon";
 import { Username } from "../../../components/common/user/UserShort";
-import Button from "../../../components/ui/Button";
 import Checkbox from "../../../components/ui/Checkbox";
 import IconButton from "../../../components/ui/IconButton";
 import InputBox from "../../../components/ui/InputBox";
@@ -73,7 +74,7 @@ const Inner = observer(({ member }: InnerProps) => {
                         );
                     })}
                     <Button
-                        compact
+                        palette="secondary"
                         disabled={isEqual(member.roles ?? [], roles)}
                         onClick={() =>
                             member.edit({
@@ -106,7 +107,11 @@ export const Members = ({ server }: Props) => {
     const members = useMemo(
         () =>
             query
-                ? data?.filter((x) => x.user?.username.includes(query))
+                ? data?.filter((x) =>
+                      x.user?.username
+                          .toLowerCase()
+                          .includes(query.toLowerCase()),
+                  )
                 : data,
         [data, query],
     );
@@ -120,7 +125,7 @@ export const Members = ({ server }: Props) => {
                 contrast
             />
             <div className={styles.subtitle}>{data?.length ?? 0} Members</div>
-            {members && (
+            {members ? (
                 <div className={styles.virtual}>
                     <Virtuoso
                         totalCount={members.length}
@@ -129,6 +134,8 @@ export const Members = ({ server }: Props) => {
                         )}
                     />
                 </div>
+            ) : (
+                <Preloader type="ring" />
             )}
         </div>
     );

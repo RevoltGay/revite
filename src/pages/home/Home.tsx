@@ -10,7 +10,7 @@ import {
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { Link } from "react-router-dom";
-import styled, { css } from "styled-components";
+import styled from "styled-components/macro";
 
 import styles from "./Home.module.scss";
 import "./snow.scss";
@@ -21,12 +21,12 @@ import { isTouchscreenDevice } from "../../lib/isTouchscreenDevice";
 
 import { useApplicationState } from "../../mobx/State";
 
+import { useIntermediate } from "../../context/intermediate/Intermediate";
 import { AppContext } from "../../context/revoltjs/RevoltClient";
 
-import wideSVG from "../../../public/assets/wide.svg";
-import Tooltip from "../../components/common/Tooltip";
 import { PageHeader } from "../../components/ui/Header";
 import CategoryButton from "../../components/ui/fluent/CategoryButton";
+import wideSVG from "/assets/wide.svg";
 
 const Overlay = styled.div`
     display: grid;
@@ -42,6 +42,7 @@ const Overlay = styled.div`
 `;
 
 export default observer(() => {
+    const { openScreen } = useIntermediate();
     const client = useContext(AppContext);
     const state = useApplicationState();
 
@@ -93,29 +94,34 @@ export default observer(() => {
                             <img src={wideSVG} />
                         </h3>
                         <div className={styles.actions}>
-                            <Link to="/settings">
+                            <a
+                                onClick={() =>
+                                    openScreen({
+                                        id: "special_input",
+                                        type: "create_group",
+                                    })
+                                }>
                                 <CategoryButton
                                     action="chevron"
                                     icon={<PlusCircle size={32} />}
                                     description={
-                                        "Invite all of your friends, some cool bots, and throw a big party."
+                                        <Text id="app.home.group_desc" />
                                     }>
-                                    Create a group
+                                    <Text id="app.home.group" />
                                 </CategoryButton>
+                            </a>
+                            <Link to="/discover">
+                                <a>
+                                    <CategoryButton
+                                        action="chevron"
+                                        icon={<Compass size={32} />}
+                                        description={
+                                            <Text id="app.home.discover_desc" />
+                                        }>
+                                        <Text id="app.home.discover" />
+                                    </CategoryButton>
+                                </a>
                             </Link>
-                            {/*<a
-                                href="#"
-                                target="_blank"
-                                rel="noreferrer">
-                                <CategoryButton
-                                    action="external"
-                                    icon={<Compass size={32} />}
-                                    description={
-                                        "Find a community based on your hobbies or interests."
-                                    }>
-                                    Join a community
-                                </CategoryButton>
-                                </a>*/}
 
                             {client.servers.get(
                                 "01F7ZSBSFHQ8TA81725KQCSDDP",
@@ -125,7 +131,7 @@ export default observer(() => {
                                         action="chevron"
                                         icon={<RightArrowCircle size={32} />}
                                         description={
-                                            "You can report issues and discuss improvements with us directly here."
+                                            <Text id="app.home.goto-testers_desc" />
                                         }>
                                         <Text id="app.home.goto-testers" />
                                     </CategoryButton>
@@ -136,7 +142,7 @@ export default observer(() => {
                                         action="chevron"
                                         icon={<Group size={32} />}
                                         description={
-                                            "You can report issues and discuss improvements with us directly here."
+                                            <Text id="app.home.join-testers_desc" />
                                         }>
                                         <Text id="app.home.join-testers" />
                                     </CategoryButton>
@@ -148,7 +154,7 @@ export default observer(() => {
                                     action="chevron"
                                     icon={<Megaphone size={32} />}
                                     description={
-                                        "Let us know how we can improve our app by giving us feedback."
+                                        <Text id="app.home.feedback_desc" />
                                     }>
                                     <Text id="app.home.feedback" />
                                 </CategoryButton>
@@ -160,23 +166,23 @@ export default observer(() => {
                                 <CategoryButton
                                     action="external"
                                     description={
-                                        "Support the project by donating - thank you!"
+                                        <Text id="app.home.donate_desc" />
                                     }
                                     icon={<Money size={32} />}>
                                     <Text id="app.home.donate" />
                                 </CategoryButton>
                             </a>
-                        </div>
-                        <Tooltip
-                            content={<Text id="app.home.settings-tooltip" />}>
                             <Link to="/settings">
                                 <CategoryButton
                                     action="chevron"
+                                    description={
+                                        <Text id="app.home.settings-tooltip" />
+                                    }
                                     icon={<Cog size={32} />}>
                                     <Text id="app.home.settings" />
                                 </CategoryButton>
                             </Link>
-                        </Tooltip>
+                        </div>
                         {isDecember && (
                             <a href="#" onClick={toggleSeasonalTheme}>
                                 Turn {seasonalTheme ? "off" : "on"} homescreen

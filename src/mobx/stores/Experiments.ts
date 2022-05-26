@@ -1,11 +1,9 @@
-import {
-    action,
-    autorun,
-    computed,
-    makeAutoObservable,
-    ObservableSet,
-} from "mobx";
+import { action, computed, makeAutoObservable, ObservableSet } from "mobx";
 
+import {
+    setOfflineSkipEnabled,
+    resetMemberSidebarFetched,
+} from "../../components/navigation/right/MemberSidebar";
 import Persistent from "../interfaces/Persistent";
 import Store from "../interfaces/Store";
 
@@ -21,7 +19,8 @@ export type Experiment =
     | "insane_asylum"
     | "light_insane_asylum"
     | "dummy"
-    | "theme_shop";
+    | "plugins"
+    | "offline_users";
 
 /**
  * Currently active experiments.
@@ -34,7 +33,8 @@ export const AVAILABLE_EXPERIMENTS: Experiment[] = ["owo",
     "insane_asylum",
     "light_insane_asylum",
     "dummy",
-    "theme_shop"
+    "offline_users",
+    "plugins",
 ];
 
 /**
@@ -47,9 +47,15 @@ export const EXPERIMENTS: {
         title: "Dummy Experiment",
         description: "This is a dummy experiment.",
     },
-    theme_shop: {
-        title: "Theme Shop",
-        description: "Allows you to access and set user submitted themes.",
+    offline_users: {
+        title: "Re-enable offline users in large servers (>10k members)",
+        description:
+            "If you can take the performance hit (for example, you're on desktop), you can re-enable offline users for big servers such as Revolt Lounge.",
+    },
+    plugins: {
+        title: "Experimental Plugin API",
+        description:
+            "This will enable the experimental plugin API. Only touch this if you know what you're doing.",
     },
     owo: {
         title: "OwO",
@@ -112,7 +118,7 @@ export default class Experiments implements Store, Persistent<Data> {
     @action hydrate(data: Data) {
         if (data.enabled) {
             for (const experiment of data.enabled) {
-                this.enabled.add(experiment as Experiment);
+                this.enable(experiment as Experiment);
             }
         }
     }
@@ -130,6 +136,11 @@ export default class Experiments implements Store, Persistent<Data> {
      * @param experiment Experiment
      */
     @action enable(experiment: Experiment) {
+        if (experiment === "offline_users") {
+            setOfflineSkipEnabled(false);
+            resetMemberSidebarFetched();
+        }
+
         this.enabled.add(experiment);
     }
 
@@ -138,6 +149,8 @@ export default class Experiments implements Store, Persistent<Data> {
      * @param experiment Experiment
      */
     @action disable(experiment: Experiment) {
+        if (experiment === "offline_users") setOfflineSkipEnabled(true);
+
         this.enabled.delete(experiment);
     }
 

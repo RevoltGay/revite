@@ -1,6 +1,5 @@
 import { detect } from "detect-browser";
-import { Session } from "revolt-api/types/Auth";
-import { Client } from "revolt.js";
+import { API } from "revolt.js";
 
 import { useApplicationState } from "../../../mobx/State";
 
@@ -9,7 +8,7 @@ import { useIntermediate } from "../../../context/intermediate/Intermediate";
 import { Form } from "./Form";
 
 export function FormLogin() {
-    const auth = useApplicationState().auth;
+    const state = useApplicationState();
     const { openScreen } = useIntermediate();
 
     return (
@@ -21,6 +20,7 @@ export function FormLogin() {
                 if (browser) {
                     let { name } = browser;
                     const { os } = browser;
+                    let isiPad;
                     if (window.isNative) {
                         friendly_name = `Revolt Desktop on ${os}`;
                     } else {
@@ -28,8 +28,12 @@ export function FormLogin() {
                             name = "safari";
                         } else if (name === "fxios") {
                             name = "firefox";
+                        } else if (name === "crios") {
+                            name = "chrome";
                         }
-                        friendly_name = `${name} on ${os}`;
+                        if (os === "Mac OS" && navigator.maxTouchPoints > 0)
+                            isiPad = true;
+                        friendly_name = `${name} on ${isiPad ? "iPadOS" : os}`;
                     }
                 } else {
                     friendly_name = "Unknown Device";
@@ -37,27 +41,28 @@ export function FormLogin() {
 
                 // ! FIXME: temporary login flow code
                 // This should be replaced in the future.
-                const client = new Client();
+                const client = state.config.createClient();
                 await client.fetchConfiguration();
-                const session = (await client.req(
-                    "POST",
-                    "/auth/session/login",
-                    { ...data, friendly_name },
-                )) as unknown as Session;
+                const session = await client.api.post("/auth/session/login", {
+                    ...data,
+                    friendly_name,
+                });
 
-                client.session = session;
-                (client as any).Axios.defaults.headers = {
-                    "x-session-token": session?.token,
-                };
-
-                async function login() {
-                    auth.setSession(session);
+                if (session.result !== "Success") {
+                    alert("unsupported!");
+                    return;
                 }
 
-                const { onboarding } = await client.req(
-                    "GET",
-                    "/onboard/hello",
-                );
+                const s = session;
+
+                client.session = session;
+                (client as any).$updateHeaders();
+
+                async function login() {
+                    state.auth.setSession(s);
+                }
+
+                const { onboarding } = await client.api.get("/onboard/hello");
 
                 if (onboarding) {
                     openScreen({

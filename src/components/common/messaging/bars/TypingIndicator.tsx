@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { RelationshipStatus } from "revolt-api/types/Users";
-import { Channel } from "revolt.js/dist/maps/Channels";
-import styled from "styled-components";
+import { Channel } from "revolt.js";
+import styled from "styled-components/macro";
 
 import { Text } from "preact-i18n";
 
@@ -13,10 +12,10 @@ const Base = styled.div`
     position: relative;
 
     > div {
-        height: 24px;
-        margin-top: -24px;
+        height: 26px;
+        top: -26px;
         position: absolute;
-
+        font-size: 13px;
         gap: 8px;
         display: flex;
         padding: 0 10px;
@@ -40,9 +39,12 @@ const Base = styled.div`
             height: 16px;
             object-fit: cover;
             border-radius: var(--border-radius-half);
+            background: var(--secondary-background);
+            //background-clip: border-box;
+            border: 2px solid var(--secondary-background);
 
             &:not(:first-child) {
-                margin-left: -4px;
+                margin-left: -6px;
             }
         }
     }
@@ -53,6 +55,7 @@ const Base = styled.div`
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        //font-weight: 600;
     }
 `;
 
@@ -61,7 +64,7 @@ export default observer(({ channel }: Props) => {
         (x) =>
             typeof x !== "undefined" &&
             x._id !== x.client.user!._id &&
-            x.relationship !== RelationshipStatus.Blocked,
+            x.relationship !== "Blocked",
     );
 
     if (users.length > 0) {

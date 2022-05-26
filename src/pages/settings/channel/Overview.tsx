@@ -1,15 +1,16 @@
 import { observer } from "mobx-react-lite";
-import { Channel } from "revolt.js/dist/maps/Channels";
-import styled from "styled-components";
+import { Channel } from "revolt.js";
+import styled from "styled-components/macro";
 
 import { Text } from "preact-i18n";
 import { useEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
 
 import { FileUploader } from "../../../context/revoltjs/FileUploads";
 
-import Button from "../../../components/ui/Button";
 import Checkbox from "../../../components/ui/Checkbox";
 import InputBox from "../../../components/ui/InputBox";
 
@@ -69,7 +70,7 @@ export default observer(({ channel }: Props) => {
                         { max_side: 256 },
                         true,
                     )}
-                    remove={() => channel.edit({ remove: "Icon" })}
+                    remove={() => channel.edit({ remove: ["Icon"] })}
                     defaultPreview={
                         channel.channel_type === "Group"
                             ? "/assets/group.png"
@@ -129,7 +130,7 @@ export default observer(({ channel }: Props) => {
                 </Checkbox>
             )}
             <p>
-                <Button onClick={save} contrast disabled={!changed}>
+                <Button onClick={save} palette="secondary" disabled={!changed}>
                     <Text id="app.special.modals.actions.save" />
                 </Button>
             </p>

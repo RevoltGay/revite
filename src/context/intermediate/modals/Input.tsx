@@ -1,5 +1,5 @@
 import { useHistory } from "react-router";
-import { Server } from "revolt.js/dist/maps/Servers";
+import { Server } from "revolt.js";
 import { ulid } from "ulid";
 
 import { Text } from "preact-i18n";
@@ -17,6 +17,7 @@ interface Props {
     onClose: () => void;
     question: Children;
     field?: Children;
+    description?: Children;
     defaultValue?: string;
     callback: (value: string) => Promise<void>;
 }
@@ -25,6 +26,7 @@ export function InputModal({
     onClose,
     question,
     field,
+    description,
     defaultValue,
     callback,
 }: Props) {
@@ -36,6 +38,7 @@ export function InputModal({
         <Modal
             visible={true}
             title={question}
+            description={description}
             disabled={processing}
             actions={[
                 {
@@ -66,6 +69,7 @@ export function InputModal({
             )}
             <InputBox
                 value={value}
+                style={{ width: "100%" }}
                 onChange={(e) => setValue(e.currentTarget.value)}
             />
         </Modal>
@@ -98,7 +102,6 @@ export function SpecialInputModal(props: SpecialProps) {
                     callback={async (name) => {
                         const group = await client.channels.createGroup({
                             name,
-                            nonce: ulid(),
                             users: [],
                         });
 
@@ -113,10 +116,20 @@ export function SpecialInputModal(props: SpecialProps) {
                     onClose={onClose}
                     question={<Text id="app.main.servers.create" />}
                     field={<Text id="app.main.servers.name" />}
+                    description={
+                        <div>
+                            By creating this server, you agree to the{" "}
+                            <a
+                                href="https://revolt.chat/aup"
+                                target="_blank"
+                                rel="noreferrer">
+                                Acceptable Use Policy.
+                            </a>
+                        </div>
+                    }
                     callback={async (name) => {
                         const server = await client.servers.createServer({
                             name,
-                            nonce: ulid(),
                         });
 
                         history.push(`/server/${server._id}`);
@@ -145,7 +158,7 @@ export function SpecialInputModal(props: SpecialProps) {
                     onClose={onClose}
                     question={<Text id="app.context_menu.set_custom_status" />}
                     field={<Text id="app.context_menu.custom_status" />}
-                    defaultValue={client.user?.status?.text}
+                    defaultValue={client.user?.status?.text ?? undefined}
                     callback={(text) =>
                         client.users.edit({
                             status: {
@@ -163,11 +176,8 @@ export function SpecialInputModal(props: SpecialProps) {
                     onClose={onClose}
                     question={"Add Friend"}
                     callback={(username) =>
-                        client
-                            .req(
-                                "PUT",
-                                `/users/${username}/friend` as "/users/id/friend",
-                            )
+                        client.api
+                            .put(`/users/${username as ""}/friend`)
                             .then(undefined)
                     }
                 />

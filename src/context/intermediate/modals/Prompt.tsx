@@ -1,10 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useHistory } from "react-router-dom";
-import { TextChannel, VoiceChannel } from "revolt-api/types/Channels";
-import { Channel } from "revolt.js/dist/maps/Channels";
-import { Message as MessageI } from "revolt.js/dist/maps/Messages";
-import { Server } from "revolt.js/dist/maps/Servers";
-import { User } from "revolt.js/dist/maps/Users";
+import { Channel, Message as MessageI, Server, User } from "revolt.js";
 import { ulid } from "ulid";
 
 import styles from "./Prompt.module.scss";
@@ -74,13 +70,18 @@ type SpecialProps = { onClose: () => void } & (
     | {
           type: "create_channel";
           target: Server;
-          cb?: (channel: TextChannel | VoiceChannel) => void;
+          cb?: (
+              channel: Channel & {
+                  channel_type: "TextChannel" | "VoiceChannel";
+              },
+          ) => void;
       }
     | { type: "create_category"; target: Server }
 );
 
 export const SpecialPromptModal = observer((props: SpecialProps) => {
     const client = useContext(AppContext);
+    const history = useHistory();
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<undefined | string>(undefined);
 
@@ -134,8 +135,7 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                     actions={[
                         {
                             confirmation: true,
-                            contrast: true,
-                            error: true,
+                            palette: "error",
                             children: (
                                 <Text
                                     id={`app.special.modals.actions.${event[1]}`}
@@ -157,6 +157,8 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                                         case "delete_channel":
                                         case "leave_server":
                                         case "delete_server":
+                                            if (props.type != "delete_channel")
+                                                history.push("/");
                                             props.target.delete();
                                             break;
                                         case "delete_bot":
@@ -198,8 +200,7 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                     actions={[
                         {
                             confirmation: true,
-                            contrast: true,
-                            error: true,
+                            palette: "error",
                             children: (
                                 <Text id="app.special.modals.actions.delete" />
                             ),
@@ -220,14 +221,16 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                                 <Text id="app.special.modals.actions.cancel" />
                             ),
                             onClick: onClose,
-                            plain: true,
+                            palette: "plain",
                         },
                     ]}
                     content={
                         <>
-                            <Text
-                                id={`app.special.modals.prompt.confirm_delete_message_long`}
-                            />
+                            <h5>
+                                <Text
+                                    id={`app.special.modals.prompt.confirm_delete_message_long`}
+                                />
+                            </h5>
                             <Message
                                 message={props.target}
                                 head={true}
@@ -249,7 +252,7 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
 
                 props.target
                     .createInvite()
-                    .then((code) => setCode(code))
+                    .then(({ _id }) => setCode(_id))
                     .catch((err) => setError(takeError(err)))
                     .finally(() => setProcessing(false));
             }, [props.target]);
@@ -299,8 +302,7 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                             children: (
                                 <Text id="app.special.modals.actions.kick" />
                             ),
-                            contrast: true,
-                            error: true,
+                            palette: "error",
                             confirmation: true,
                             onClick: async () => {
                                 setProcessing(true);
@@ -353,8 +355,8 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                             children: (
                                 <Text id="app.special.modals.actions.ban" />
                             ),
-                            contrast: true,
-                            error: true,
+                            palette: "error",
+
                             confirmation: true,
                             onClick: async () => {
                                 setProcessing(true);
@@ -412,7 +414,8 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                     actions={[
                         {
                             confirmation: true,
-                            contrast: true,
+                            palette: "secondary",
+
                             children: (
                                 <Text id="app.special.modals.actions.create" />
                             ),
@@ -424,11 +427,10 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                                         await props.target.createChannel({
                                             type,
                                             name,
-                                            nonce: ulid(),
                                         });
 
                                     if (props.cb) {
-                                        props.cb(channel);
+                                        props.cb(channel as any);
                                     } else {
                                         history.push(
                                             `/server/${props.target._id}/channel/${channel._id}`,
@@ -488,7 +490,7 @@ export const SpecialPromptModal = observer((props: SpecialProps) => {
                     actions={[
                         {
                             confirmation: true,
-                            contrast: true,
+                            palette: "secondary",
                             children: (
                                 <Text id="app.special.modals.actions.create" />
                             ),

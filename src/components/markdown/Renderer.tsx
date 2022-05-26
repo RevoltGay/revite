@@ -5,10 +5,6 @@ import "katex/dist/katex.min.css";
 import MarkdownIt from "markdown-it";
 // @ts-expect-error No typings.
 import MarkdownEmoji from "markdown-it-emoji/dist/markdown-it-emoji-bare";
-// @ts-expect-error No typings.
-import MarkdownSub from "markdown-it-sub";
-// @ts-expect-error No typings.
-import MarkdownSup from "markdown-it-sup";
 import { RE_MENTIONS } from "revolt.js";
 
 import styles from "./Markdown.module.scss";
@@ -17,6 +13,7 @@ import { useCallback, useContext } from "preact/hooks";
 import { internalEmit } from "../../lib/eventEmitter";
 import { determineLink } from "../../lib/links";
 
+import { dayjs } from "../../context/Locale";
 import { useIntermediate } from "../../context/intermediate/Intermediate";
 import { AppContext } from "../../context/revoltjs/RevoltClient";
 
@@ -25,8 +22,6 @@ import { generateEmoji } from "../common/Emoji";
 import { emojiDictionary } from "../../assets/emojis";
 import { MarkdownProps } from "./Markdown";
 import Prism from "./prism";
-
-import { dayjs } from "../../context/Locale";
 
 // TODO: global.d.ts file for defining globals
 declare global {
@@ -65,8 +60,6 @@ export const md: MarkdownIt = MarkdownIt({
     .disable("image")
     .use(MarkdownEmoji, { defs: emojiDictionary })
     .use(MarkdownSpoilers)
-    .use(MarkdownSup)
-    .use(MarkdownSub)
     .use(MarkdownKatex, {
         throwOnError: false,
         maxExpand: 0,
@@ -130,13 +123,13 @@ export default function Renderer({ content, disallowBigEmoji }: MarkdownProps) {
     const { openLink } = useIntermediate();
 
     if (typeof content === "undefined") return null;
-    if (content.length === 0) return null;
+    if (!content || content.length === 0) return null;
 
     // We replace the message with the mention at the time of render.
     // We don't care if the mention changes.
     const newContent = content
         .replace(RE_TIME, (sub: string, ...args: unknown[]) => {
-            if (isNaN(args[0] as string)) return sub;
+            if (isNaN(args[0] as number)) return sub;
             const date = dayjs.unix(args[0] as number);
             const format = args[1] as string;
             let final = "";

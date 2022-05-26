@@ -1,10 +1,18 @@
 import { Send, ShieldX } from "@styled-icons/boxicons-solid";
 import Axios, { CancelTokenSource } from "axios";
-import { observer } from "mobx-react-lite";
+import Long from "long";
 import owoify from "owoify-js";
-import { ChannelPermission } from "revolt.js/dist/api/permissions";
-import { Channel } from "revolt.js/dist/maps/Channels";
-import styled, { css } from "styled-components";
+import { observer } from "mobx-react-lite";
+import {
+    Channel,
+    DEFAULT_PERMISSION_DIRECT_MESSAGE,
+    DEFAULT_PERMISSION_VIEW_ONLY,
+    Permission,
+    Server,
+    U32_MAX,
+    UserPermission,
+} from "revolt.js";
+import styled, { css } from "styled-components/macro";
 import { ulid } from "ulid";
 
 import { Text } from "preact-i18n";
@@ -57,6 +65,7 @@ export type UploadState =
     | { type: "failed"; files: File[]; error: string };
 
 const Base = styled.div`
+    z-index: 1;
     display: flex;
     align-items: flex-start;
     background: var(--message-box);
@@ -79,9 +88,15 @@ const Blocked = styled.div`
     user-select: none;
     font-size: var(--text-size);
     color: var(--tertiary-foreground);
+    flex-grow: 1;
+    cursor: not-allowed;
 
     .text {
-        padding: 14px;
+        padding: var(--message-box-padding);
+    }
+
+    > div > div {
+        cursor: default;
     }
 
     svg {
@@ -92,15 +107,15 @@ const Blocked = styled.div`
 const Action = styled.div`
     > div {
         height: 48px;
-        width: 34px;
+        width: 48px;
         display: flex;
         align-items: center;
-        justify-content: end;
+        justify-content: center;
         /*padding: 14px 0 14px 14px;*/
     }
 
     .mobile {
-        justify-content: start;
+        width: 62px;
     }
 
     ${() =>
@@ -112,8 +127,25 @@ const Action = styled.div`
         `}
 `;
 
+const FileAction = styled.div`
+    > div {
+        height: 48px;
+        width: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+`;
+
+const ThisCodeWillBeReplacedAnywaysSoIMightAsWellJustDoItThisWay__Padding = styled.div`
+    width: 16px;
+`;
+
 // For sed replacement
 const RE_SED = new RegExp("^s/([^])*/([^])*$");
+
+// Tests for code block delimiters (``` at start of line)
+const RE_CODE_DELIMITER = new RegExp("^```", "gm");
 
 // ! FIXME: add to app config and load from app config
 export const CAN_UPLOAD_AT_ONCE = 5;
@@ -133,7 +165,7 @@ export default observer(({ channel }: Props) => {
 
     const renderer = getRenderer(channel);
 
-    if (!(channel.permission & ChannelPermission.SendMessage)) {
+    if (!channel.havePermission("SendMessage")) {
         return (
             <Base>
                 <Blocked>
@@ -268,7 +300,7 @@ export default observer(({ channel }: Props) => {
             );
             renderer.messages.reverse();
 
-            if (msg) {
+            if (msg?.content) {
                 // eslint-disable-next-line prefer-const
                 let [_, toReplace, newText, flags] = content.split(/\//);
 
@@ -455,6 +487,21 @@ export default observer(({ channel }: Props) => {
         }
     }
 
+    function isInCodeBlock(cursor: number): boolean {
+        const content = state.draft.get(channel._id) || "";
+        const contentBeforeCursor = content.substring(0, cursor);
+
+        let delimiterCount = 0;
+        for (const delimiter of contentBeforeCursor.matchAll(
+            RE_CODE_DELIMITER,
+        )) {
+            delimiterCount++;
+        }
+
+        // Odd number of ``` delimiters before cursor => we are in code block
+        return delimiterCount % 2 === 1;
+    }
+
     // TODO: change to useDebounceCallback
     // eslint-disable-next-line
     const debouncedStopTyping = useCallback(
@@ -515,8 +562,8 @@ export default observer(({ channel }: Props) => {
                 setReplies={setReplies}
             />
             <Base>
-                {channel.permission & ChannelPermission.UploadFiles ? (
-                    <Action>
+                {channel.havePermission("UploadFiles") ? (
+                    <FileAction>
                         <FileUploader
                             size={24}
                             behaviour="multi"
@@ -551,8 +598,10 @@ export default observer(({ channel }: Props) => {
                                 }
                             }}
                         />
-                    </Action>
-                ) : undefined}
+                    </FileAction>
+                ) : (
+                    <ThisCodeWillBeReplacedAnywaysSoIMightAsWellJustDoItThisWay__Padding />
+                )}
                 <TextAreaAutoSize
                     autoFocus
                     hideBorder
@@ -583,7 +632,8 @@ export default observer(({ channel }: Props) => {
                             !e.shiftKey &&
                             !e.isComposing &&
                             e.key === "Enter" &&
-                            !isTouchscreenDevice
+                            !isTouchscreenDevice &&
+                            !isInCodeBlock(e.currentTarget.selectionStart)
                         ) {
                             e.preventDefault();
                             return send();
@@ -631,12 +681,23 @@ export default observer(({ channel }: Props) => {
                     onFocus={onFocus}
                     onBlur={onBlur}
                 />
+                {/*<Action>
+                    <IconButton>
+                        <Box size={24} />
+                    </IconButton>
+                </Action>
                 <Action>
-                    {/*<IconButton onClick={emojiPicker}>
-                        <HappyAlt size={20} />
-                </IconButton>*/}
+                    <IconButton>
+                        <HappyBeaming size={24} />
+                    </IconButton>
+                </Action>*/}
+                <Action>
                     <IconButton
-                        className="mobile"
+                        className={
+                            state.settings.get("appearance:show_send_button")
+                                ? ""
+                                : "mobile"
+                        }
                         onClick={send}
                         onMouseDown={(e) => e.preventDefault()}>
                         <Send size={20} />

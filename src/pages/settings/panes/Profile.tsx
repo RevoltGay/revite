@@ -1,11 +1,13 @@
 import { Markdown } from "@styled-icons/boxicons-logos";
 import { observer } from "mobx-react-lite";
 import { useHistory } from "react-router-dom";
-import { Profile as ProfileI } from "revolt-api/types/Users";
+import { API } from "revolt.js";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useCallback, useContext, useEffect, useState } from "preact/hooks";
+
+import { Button } from "@revoltchat/ui";
 
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
 import { useTranslation } from "../../../lib/i18n";
@@ -21,7 +23,6 @@ import {
 import AutoComplete, {
     useAutoComplete,
 } from "../../../components/common/AutoComplete";
-import Button from "../../../components/ui/Button";
 import Tip from "../../../components/ui/Tip";
 
 export const Profile = observer(() => {
@@ -30,7 +31,9 @@ export const Profile = observer(() => {
     const client = useClient();
     const history = useHistory();
 
-    const [profile, setProfile] = useState<undefined | ProfileI>(undefined);
+    const [profile, setProfile] = useState<undefined | API.UserProfile>(
+        undefined,
+    );
 
     // ! FIXME: temporary solution
     // ! we should just announce profile changes through WS
@@ -96,14 +99,14 @@ export const Profile = observer(() => {
                         <Text id="app.settings.pages.profile.profile_picture" />
                     </h3>
                     <FileUploader
-                        width={80}
-                        height={80}
+                        width={92}
+                        height={92}
                         style="icon"
                         fileType="avatars"
                         behaviour="upload"
                         maxFileSize={4_000_000}
                         onUpload={(avatar) => client.users.edit({ avatar })}
-                        remove={() => client.users.edit({ remove: "Avatar" })}
+                        remove={() => client.users.edit({ remove: ["Avatar"] })}
                         defaultPreview={client.user!.generateAvatarURL(
                             { max_side: 256 },
                             true,
@@ -132,7 +135,7 @@ export const Profile = observer(() => {
                         }}
                         remove={async () => {
                             await client.users.edit({
-                                remove: "ProfileBackground",
+                                remove: ["ProfileBackground"],
                             });
                             setProfile({ ...profile, background: undefined });
                         }}
@@ -189,7 +192,7 @@ export const Profile = observer(() => {
             </div>
             <p>
                 <Button
-                    contrast
+                    palette="secondary"
                     onClick={() => {
                         setChanged(false);
                         client.users.edit({

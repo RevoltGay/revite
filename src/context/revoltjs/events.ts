@@ -1,48 +1,25 @@
-import { Client } from "revolt.js/dist";
+import { Client, Server } from "revolt.js";
 
 import { StateUpdater } from "preact/hooks";
 
-import Auth from "../../mobx/stores/Auth";
+import { deleteRenderer } from "../../lib/renderer/Singleton";
+
+import State from "../../mobx/State";
 
 import { resetMemberSidebarFetched } from "../../components/navigation/right/MemberSidebar";
 import { ClientStatus } from "./RevoltClient";
 
-export let preventReconnect = false;
-let preventUntil = 0;
-
-export function setReconnectDisallowed(allowed: boolean) {
-    preventReconnect = allowed;
-}
-
 export function registerEvents(
-    auth: Auth,
+    state: State,
     setStatus: StateUpdater<ClientStatus>,
     client: Client,
 ) {
     if (!client) return;
 
-    function attemptReconnect() {
-        if (preventReconnect) return;
-        function reconnect() {
-            preventUntil = +new Date() + 2000;
-            client.websocket.connect().catch((err) => console.error(err));
-        }
-
-        if (+new Date() > preventUntil) {
-            setTimeout(reconnect, 2000);
-        } else {
-            reconnect();
-        }
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let listeners: Record<string, (...args: any[]) => void> = {
         connecting: () => setStatus(ClientStatus.CONNECTING),
-
-        dropped: () => {
-            setStatus(ClientStatus.DISCONNECTED);
-            attemptReconnect();
-        },
+        dropped: () => setStatus(ClientStatus.DISCONNECTED),
 
         ready: () => {
             resetMemberSidebarFetched();
@@ -50,8 +27,21 @@ export function registerEvents(
         },
 
         logout: () => {
-            auth.logout();
+            state.auth.logout();
+            state.reset();
             setStatus(ClientStatus.READY);
+        },
+
+        "channel/delete": (channel_id: string) => {
+            deleteRenderer(channel_id);
+        },
+
+        "server/delete": (_, server: Server) => {
+            if (server) {
+                for (const channel_id of server.channel_ids) {
+                    deleteRenderer(channel_id);
+                }
+            }
         },
     };
 
@@ -73,14 +63,13 @@ export function registerEvents(
 
     const online = () => {
         setStatus(ClientStatus.RECONNECTING);
-        setReconnectDisallowed(false);
-        attemptReconnect();
+        client.options.autoReconnect = false;
+        client.websocket.connect();
     };
 
     const offline = () => {
-        setReconnectDisallowed(true);
+        client.options.autoReconnect = false;
         client.websocket.disconnect();
-        setStatus(ClientStatus.OFFLINE);
     };
 
     window.addEventListener("online", online);

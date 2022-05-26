@@ -1,5 +1,5 @@
-import { Message } from "revolt.js/dist/maps/Messages";
-import styled from "styled-components";
+import { Message } from "revolt.js";
+import styled from "styled-components/macro";
 
 import { useContext, useEffect, useState } from "preact/hooks";
 
@@ -48,7 +48,7 @@ interface Props {
 }
 
 export default function MessageEditor({ message, finish }: Props) {
-    const [content, setContent] = useState((message.content as string) ?? "");
+    const [content, setContent] = useState(message.content ?? "");
     const { focusTaken } = useContext(IntermediateContext);
     const { openScreen } = useIntermediate();
 

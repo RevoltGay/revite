@@ -4,9 +4,10 @@ import styles from "./Onboarding.module.scss";
 import { Text } from "preact-i18n";
 import { useState } from "preact/hooks";
 
-import wideSVG from "../../../../public/assets/wide.svg";
-import Button from "../../../components/ui/Button";
+import { Button } from "@revoltchat/ui";
+
 import Preloader from "../../../components/ui/Preloader";
+import wideSVG from "/assets/wide.svg";
 
 import FormField from "../../../pages/login/FormField";
 import { takeError } from "../../revoltjs/util";

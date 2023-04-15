@@ -3,24 +3,25 @@ import { Key, Clipboard, Globe, Plus } from "@styled-icons/boxicons-regular";
 import { LockAlt, HelpCircle } from "@styled-icons/boxicons-solid";
 import type { AxiosError } from "axios";
 import { observer } from "mobx-react-lite";
-import { API } from "revolt.js";
-import { User } from "revolt.js";
+import { API, User } from "revolt.js";
 import styled from "styled-components/macro";
 
 import styles from "./Panes.module.scss";
 import { Text } from "preact-i18n";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { Button } from "@revoltchat/ui";
+import {
+    Button,
+    CategoryButton,
+    Checkbox,
+    InputBox,
+    Tip,
+} from "@revoltchat/ui";
 
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
 import { internalEmit } from "../../../lib/eventEmitter";
 import { useTranslation } from "../../../lib/i18n";
 import { stopPropagation } from "../../../lib/stopPropagation";
-
-import { useIntermediate } from "../../../context/intermediate/Intermediate";
-import { FileUploader } from "../../../context/revoltjs/FileUploads";
-import { useClient } from "../../../context/revoltjs/RevoltClient";
 
 import AutoComplete, {
     useAutoComplete,
@@ -28,10 +29,9 @@ import AutoComplete, {
 import CollapsibleSection from "../../../components/common/CollapsibleSection";
 import Tooltip from "../../../components/common/Tooltip";
 import UserIcon from "../../../components/common/user/UserIcon";
-import Checkbox from "../../../components/ui/Checkbox";
-import InputBox from "../../../components/ui/InputBox";
-import Tip from "../../../components/ui/Tip";
-import CategoryButton from "../../../components/ui/fluent/CategoryButton";
+import { useClient } from "../../../controllers/client/ClientController";
+import { FileUploader } from "../../../controllers/client/jsx/legacy/FileUploads";
+import { modalController } from "../../../controllers/modals/ModalController";
 
 interface Data {
     _id: string;
@@ -86,7 +86,6 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
     );
     const [interactionsRef, setInteractionsRef] =
         useState<HTMLInputElement | null>(null);
-    const { writeClipboard, openScreen } = useIntermediate();
 
     const [profile, setProfile] = useState<undefined | API.UserProfile>(
         undefined,
@@ -96,12 +95,6 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
         client.api
             .get(`/users/${bot._id as ""}/profile`, undefined, {
                 headers: { "x-bot-token": bot.token },
-                transformRequest: (data, headers) => {
-                    // Remove user headers for this request
-                    delete headers?.["x-user-id"];
-                    delete headers?.["x-session-token"];
-                    return data;
-                },
             })
             .then((profile) => setProfile(profile ?? {}));
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,7 +120,8 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
         setSaving(true);
         setError("");
         try {
-            await client.bots.edit(bot._id, changes);
+            if (Object.keys(changes).length > 0)
+                await client.bots.edit(bot._id, changes);
             if (changed) await editBotContent(profile?.content ?? undefined);
             onUpdate(changes);
             setChanged(false);
@@ -156,12 +150,6 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
             avatar ? { avatar } : { remove: ["Avatar"] },
             {
                 headers: { "x-bot-token": bot.token },
-                transformRequest: (data, headers) => {
-                    // Remove user headers for this request
-                    delete headers?.["x-user-id"];
-                    delete headers?.["x-session-token"];
-                    return JSON.stringify(data);
-                },
             },
         );
 
@@ -181,12 +169,6 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                 : { remove: ["ProfileBackground"] },
             {
                 headers: { "x-bot-token": bot.token },
-                transformRequest: (data, headers) => {
-                    // Remove user headers for this request
-                    delete headers?.["x-user-id"];
-                    delete headers?.["x-session-token"];
-                    return JSON.stringify(data);
-                },
             },
         );
 
@@ -203,12 +185,6 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
             content ? { profile: { content } } : { remove: ["ProfileContent"] },
             {
                 headers: { "x-bot-token": bot.token },
-                transformRequest: (data, headers) => {
-                    // Remove user headers for this request
-                    delete headers?.["x-user-id"];
-                    delete headers?.["x-session-token"];
-                    return data;
-                },
             },
         );
 
@@ -239,8 +215,8 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                                 target={user}
                                 size={42}
                                 onClick={() =>
-                                    openScreen({
-                                        id: "profile",
+                                    modalController.push({
+                                        type: "user_profile",
                                         user_id: user._id,
                                     })
                                 }
@@ -288,7 +264,9 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                                         }>
                                         <a
                                             onClick={() =>
-                                                writeClipboard(user!._id)
+                                                modalController.writeText(
+                                                    user!._id,
+                                                )
                                             }>
                                             {user!._id}
                                         </a>
@@ -356,7 +334,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                 <CategoryButton
                     account
                     icon={<Key size={24} />}
-                    onClick={() => writeClipboard(bot.token)}
+                    onClick={() => modalController.writeText(bot.token)}
                     description={
                         <>
                             {"••••• "}
@@ -364,10 +342,10 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                                 onClick={(ev) =>
                                     stopPropagation(
                                         ev,
-                                        openScreen({
-                                            id: "token_reveal",
+                                        modalController.push({
+                                            type: "show_token",
                                             token: bot.token,
-                                            username: user!.username,
+                                            name: user!.username,
                                         }),
                                     )
                                 }>
@@ -436,15 +414,14 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                         />
                     </CollapsibleSection>
                     <Checkbox
-                        checked={data.public}
+                        value={data.public}
                         disabled={saving}
-                        contrast
+                        title={<Text id="app.settings.pages.bots.public_bot" />}
                         description={
                             <Text id="app.settings.pages.bots.public_bot_desc" />
                         }
-                        onChange={(v) => setData({ ...data, public: v })}>
-                        <Text id="app.settings.pages.bots.public_bot" />
-                    </Checkbox>
+                        onChange={(v) => setData({ ...data, public: v })}
+                    />
                     <h3>
                         <Text id="app.settings.pages.bots.interactions_url" />
                     </h3>
@@ -452,6 +429,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                         <Text id="app.settings.pages.bots.reserved" />
                     </h5>
                     <InputBox
+                        palette="secondary"
                         ref={setInteractionsRef}
                         value={data.interactions_url}
                         disabled={saving}
@@ -467,9 +445,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
 
             {error && (
                 <div className={styles.botSection}>
-                    <Tip error hideSeparator>
-                        {error}
-                    </Tip>
+                    <Tip palette="error">{error}</Tip>
                 </div>
             )}
 
@@ -483,8 +459,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                             palette="error"
                             onClick={async () => {
                                 setSaving(true);
-                                openScreen({
-                                    id: "special_prompt",
+                                modalController.push({
                                     type: "delete_bot",
                                     target: bot._id,
                                     name: user.username,
@@ -499,7 +474,7 @@ function BotCard({ bot, onDelete, onUpdate }: Props) {
                     <>
                         <Button
                             onClick={() =>
-                                writeClipboard(
+                                modalController.writeText(
                                     `${window.origin}/bot/${bot._id}`,
                                 )
                             }>
@@ -531,16 +506,14 @@ export const MyBots = observer(() => {
         // eslint-disable-next-line
     }, []);
 
-    const { openScreen } = useIntermediate();
-
     return (
         <div className={styles.myBots}>
             <CategoryButton
                 account
                 icon={<Plus size={24} />}
                 onClick={() =>
-                    openScreen({
-                        id: "create_bot",
+                    modalController.push({
+                        type: "create_bot",
                         onCreate: (bot) => setBots([...(bots ?? []), bot]),
                     })
                 }

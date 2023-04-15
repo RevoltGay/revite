@@ -1,8 +1,6 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { action, makeAutoObservable } from "mobx";
-import { Channel } from "revolt.js";
-import { Message } from "revolt.js";
-import { Nullable } from "revolt.js";
+import { Channel, Message, Nullable } from "revolt.js";
 
 import { SimpleRenderer } from "./simple/SimpleRenderer";
 import { RendererRoutines, ScrollState } from "./types";
@@ -36,19 +34,19 @@ export class ChannelRenderer {
         });
 
         this.receive = this.receive.bind(this);
-        this.edit = this.edit.bind(this);
+        this.updated = this.updated.bind(this);
         this.delete = this.delete.bind(this);
 
         const client = this.channel.client;
         client.addListener("message", this.receive);
-        client.addListener("message/update", this.edit);
+        client.addListener("message/updated", this.updated);
         client.addListener("message/delete", this.delete);
     }
 
     destroy() {
         const client = this.channel.client;
         client.removeListener("message", this.receive);
-        client.removeListener("message/update", this.edit);
+        client.removeListener("message/updated", this.updated);
         client.removeListener("message/delete", this.delete);
     }
 
@@ -56,8 +54,8 @@ export class ChannelRenderer {
         this.currentRenderer.receive(this, message);
     }
 
-    private edit(id: string, patch: Partial<Message>) {
-        this.currentRenderer.edit(this, id, patch);
+    private updated(id: string, message: Message) {
+        this.currentRenderer.updated(this, id, message);
     }
 
     private delete(id: string) {

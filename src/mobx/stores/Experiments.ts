@@ -20,7 +20,9 @@ export type Experiment =
     | "light_insane_asylum"
     | "dummy"
     | "plugins"
-    | "offline_users";
+    | "offline_users"
+    | "plugins"
+    | "picker";
 
 /**
  * Currently active experiments.
@@ -35,6 +37,7 @@ export const AVAILABLE_EXPERIMENTS: Experiment[] = ["owo",
     "dummy",
     "offline_users",
     "plugins",
+    "picker",
 ];
 
 /**
@@ -44,18 +47,23 @@ export const EXPERIMENTS: {
     [key in Experiment]: { title: string; description: string };
 } = {
     dummy: {
-        title: "Dummy Experiment",
-        description: "This is a dummy experiment.",
+        title: "Placeholder Experiment",
+        description: "This is a placeholder experiment.",
     },
     offline_users: {
         title: "Re-enable offline users in large servers (>10k members)",
         description:
-            "If you can take the performance hit (for example, you're on desktop), you can re-enable offline users for big servers such as Revolt Lounge.",
+            "If you can take the performance hit - for example, if you're on desktop - you can re-enable offline users for big servers such as the Revolt Lounge.",
     },
     plugins: {
         title: "Experimental Plugin API",
         description:
             "This will enable the experimental plugin API. Only touch this if you know what you're doing.",
+    },
+    picker: {
+        title: "Custom Emoji",
+        description:
+            "This will enable a work-in-progress emoji picker, custom emoji settings and a reaction picker.",
     },
     owo: {
         title: "OwO",

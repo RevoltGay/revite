@@ -7,8 +7,7 @@ import styled, { css } from "styled-components";
 import { Text } from "preact-i18n";
 import { useMemo } from "preact/hooks";
 
-import Checkbox from "../../ui/Checkbox";
-import { OverrideSwitch } from "@revoltchat/ui";
+import { Checkbox, OverrideSwitch } from "@revoltchat/ui";
 
 interface PermissionSelectProps {
     id: keyof typeof Permission;
@@ -25,7 +24,6 @@ const PermissionEntry = styled.label<{ disabled?: boolean }>`
     width: 100%;
     margin: 8px 0;
     display: flex;
-    font-size: 1.1em;
     align-items: center;
 
     .title {
@@ -69,13 +67,13 @@ export function PermissionSelect({
             }
 
             return "Neutral";
-        } else {
+        } 
             if (Long.fromNumber(value).and(permission).eq(permission)) {
                 return "Allow";
             }
 
             return "Neutral";
-        }
+        
     }, [value]);
 
     function onSwitch(state: State) {
@@ -118,12 +116,12 @@ export function PermissionSelect({
 
     return (
         <PermissionEntry disabled={disabled}>
-            <span class="title">
+            <span className="title">
                 <span>
                     <Text id={`permissions.${id}.t`}>{id}</Text>
                     {disabled && <Lock className="lock" size={14} />}
                 </span>
-                <span class="description">
+                <span className="description">
                     <Text id={`permissions.${id}.d`} />
                 </span>
             </span>
@@ -136,7 +134,7 @@ export function PermissionSelect({
             ) : (
                 <Checkbox
                     disabled={disabled}
-                    checked={state === "Allow"}
+                    value={state === "Allow"}
                     onChange={() =>
                         onChange(
                             Long.fromNumber(value, false)

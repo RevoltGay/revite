@@ -3,8 +3,8 @@ import { API } from "revolt.js";
 
 import styles from "./Embed.module.scss";
 
-import { useIntermediate } from "../../../../context/intermediate/Intermediate";
-import { useClient } from "../../../../context/revoltjs/RevoltClient";
+import { useClient } from "../../../../controllers/client/ClientController";
+import { modalController } from "../../../../controllers/modals/ModalController";
 
 interface Props {
     embed: API.Embed;
@@ -14,7 +14,6 @@ interface Props {
 
 export default function EmbedMedia({ embed, width, height }: Props) {
     if (embed.type !== "Website") return null;
-    const { openScreen } = useIntermediate();
     const client = useClient();
 
     switch (embed.special?.type) {
@@ -50,7 +49,7 @@ export default function EmbedMedia({ embed, width, height }: Props) {
         case "Lightspeed":
             return (
                 <iframe
-                    src={`https://next.lightspeed.tv/embed/${embed.special.id}`}
+                    src={`https://new.lightspeed.tv/embed/${embed.special.id}/stream`}
                     frameBorder="0"
                     allowFullScreen
                     scrolling="no"
@@ -93,6 +92,16 @@ export default function EmbedMedia({ embed, width, height }: Props) {
                 />
             );
         }
+        case "Streamable": {
+            return (
+                <iframe
+                    src={`https://streamable.com/e/${embed.special.id}?loop=0`}
+                    seamless
+                    loading="lazy"
+                    style={{ height }}
+                />
+            );
+        }
         default: {
             if (embed.video) {
                 const url = embed.video.url;
@@ -115,10 +124,10 @@ export default function EmbedMedia({ embed, width, height }: Props) {
                         className={styles.image}
                         src={client.proxyFile(url)}
                         loading="lazy"
-                        style={{ width, height }}
+                        style={{ width: "100%", height: "100%" }}
                         onClick={() =>
-                            openScreen({
-                                id: "image_viewer",
+                            modalController.push({
+                                type: "image_viewer",
                                 embed: embed.image!,
                             })
                         }

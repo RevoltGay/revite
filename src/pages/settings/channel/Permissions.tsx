@@ -1,14 +1,13 @@
 import isEqual from "lodash.isequal";
 import { observer } from "mobx-react-lite";
-import { Channel, API } from "revolt.js";
-import { DEFAULT_PERMISSION_DIRECT_MESSAGE } from "revolt.js";
+import { Channel, API, DEFAULT_PERMISSION_DIRECT_MESSAGE } from "revolt.js";
 
 import { Text } from "preact-i18n";
 import { useState } from "preact/hooks";
 
-import { TextReact } from "../../../lib/i18n";
-
 import { PermissionsLayout, Button, SpaceBetween, H1 } from "@revoltchat/ui";
+
+import { TextReact } from "../../../lib/i18n";
 
 import { PermissionList } from "../../../components/settings/roles/PermissionList";
 import { RoleOrDefault } from "../../../components/settings/roles/RoleSelection";
@@ -101,7 +100,7 @@ export default observer(({ channel }: Props) => {
                             filter={[
                                 ...(channel.channel_type === "Group"
                                     ? []
-                                    : ["ViewChannel" as "ViewChannel"]),
+                                    : ["ViewChannel" as const]),
                                 "ReadMessageHistory",
                                 "SendMessage",
                                 "ManageMessages",
@@ -109,6 +108,7 @@ export default observer(({ channel }: Props) => {
                                 "SendEmbeds",
                                 "UploadFiles",
                                 "Masquerade",
+                                "React",
                                 "ManageChannel",
                                 "ManagePermissions",
                             ]}

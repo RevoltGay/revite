@@ -1,22 +1,17 @@
-import { Send, ShieldX } from "@styled-icons/boxicons-solid";
+import { HappyBeaming, Send, ShieldX } from "@styled-icons/boxicons-solid";
 import Axios, { CancelTokenSource } from "axios";
 import Long from "long";
 import owoify from "owoify-js";
 import { observer } from "mobx-react-lite";
-import {
-    Channel,
-    DEFAULT_PERMISSION_DIRECT_MESSAGE,
-    DEFAULT_PERMISSION_VIEW_ONLY,
-    Permission,
-    Server,
-    U32_MAX,
-    UserPermission,
-} from "revolt.js";
+import { Channel } from "revolt.js";
 import styled, { css } from "styled-components/macro";
 import { ulid } from "ulid";
 
 import { Text } from "preact-i18n";
-import { useCallback, useContext, useEffect, useState } from "preact/hooks";
+import { memo } from "preact/compat";
+import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
+
+import { IconButton, Picker } from "@revoltchat/ui";
 
 import TextAreaAutoSize from "../../../lib/TextAreaAutoSize";
 import { debounce } from "../../../lib/debounce";
@@ -29,20 +24,25 @@ import {
     SMOOTH_SCROLL_ON_RECEIVE,
 } from "../../../lib/renderer/Singleton";
 
-import { useApplicationState } from "../../../mobx/State";
+import { state, useApplicationState } from "../../../mobx/State";
+import { DraftObject } from "../../../mobx/stores/Draft";
 import { Reply } from "../../../mobx/stores/MessageQueue";
 
-import { useIntermediate } from "../../../context/intermediate/Intermediate";
+import { dayjs } from "../../../context/Locale";
+
+import { emojiDictionary } from "../../../assets/emojis";
+import {
+    clientController,
+    useClient,
+} from "../../../controllers/client/ClientController";
+import { takeError } from "../../../controllers/client/jsx/error";
 import {
     FileUploader,
     grabFiles,
     uploadFile,
-} from "../../../context/revoltjs/FileUploads";
-import { AppContext } from "../../../context/revoltjs/RevoltClient";
-import { takeError } from "../../../context/revoltjs/util";
-
-import IconButton from "../../ui/IconButton";
-
+} from "../../../controllers/client/jsx/legacy/FileUploads";
+import { modalController } from "../../../controllers/modals/ModalController";
+import { RenderEmoji } from "../../markdown/plugins/emoji";
 import AutoComplete, { useAutoComplete } from "../AutoComplete";
 import { PermissionTooltip } from "../Tooltip";
 import FilePreview from "./bars/FilePreview";
@@ -105,7 +105,7 @@ const Blocked = styled.div`
 `;
 
 const Action = styled.div`
-    > div {
+    > a {
         height: 48px;
         width: 48px;
         display: flex;
@@ -128,13 +128,17 @@ const Action = styled.div`
 `;
 
 const FileAction = styled.div`
-    > div {
+    > a {
         height: 48px;
         width: 62px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
+`;
+
+const FloatingLayer = styled.div`
+    position: relative;
 `;
 
 const ThisCodeWillBeReplacedAnywaysSoIMightAsWellJustDoItThisWay__Padding = styled.div`
@@ -146,6 +150,67 @@ const RE_SED = new RegExp("^s/([^])*/([^])*$");
 
 // Tests for code block delimiters (``` at start of line)
 const RE_CODE_DELIMITER = new RegExp("^```", "gm");
+
+export const HackAlertThisFileWillBeReplaced = observer(
+    ({
+        onSelect,
+        onClose,
+    }: {
+        onSelect: (emoji: string) => void;
+        onClose: () => void;
+    }) => {
+        const renderEmoji = useMemo(
+            () =>
+                memo(({ emoji }: { emoji: string }) => (
+                    <RenderEmoji match={emoji} {...({} as any)} />
+                )),
+            [],
+        );
+
+        const emojis: Record<string, any> = {
+            default: Object.keys(emojiDictionary).map((id) => ({ id })),
+        };
+
+        // ! FIXME: also expose typing from component
+        const categories: any[] = [];
+
+        for (const server of state.ordering.orderedServers) {
+            // ! FIXME: add a separate map on each server for emoji
+            const list = [...clientController.getReadyClient()!.emojis.values()]
+                .filter(
+                    (emoji) =>
+                        emoji.parent.type !== "Detached" &&
+                        emoji.parent.id === server._id,
+                )
+                .map(({ _id, name }) => ({ id: _id, name }));
+
+            if (list.length > 0) {
+                emojis[server._id] = list;
+                categories.push({
+                    id: server._id,
+                    name: server.name,
+                    iconURL: server.generateIconURL({ max_side: 256 }),
+                });
+            }
+        }
+
+        categories.push({
+            id: "default",
+            name: "Default",
+            emoji: "smiley",
+        });
+
+        return (
+            <Picker
+                emojis={emojis}
+                categories={categories}
+                renderEmoji={renderEmoji}
+                onSelect={onSelect}
+                onClose={onClose}
+            />
+        );
+    },
+);
 
 // ! FIXME: add to app config and load from app config
 export const CAN_UPLOAD_AT_ONCE = 5;
@@ -159,11 +224,41 @@ export default observer(({ channel }: Props) => {
     });
     const [typing, setTyping] = useState<boolean | number>(false);
     const [replies, setReplies] = useState<Reply[]>([]);
-    const { openScreen } = useIntermediate();
-    const client = useContext(AppContext);
+    const [picker, setPicker] = useState(false);
+    const client = useClient();
     const translate = useTranslation();
 
+    const closePicker = useCallback(() => setPicker(false), []);
+
     const renderer = getRenderer(channel);
+
+    if (channel.server?.member?.timeout) {
+        return (
+            <Base>
+                <Blocked>
+                    <Action>
+                        <PermissionTooltip
+                            permission="SendMessages"
+                            placement="top">
+                            <ShieldX size={22} />
+                        </PermissionTooltip>
+                    </Action>
+                    <div className="text">
+                        <Text
+                            id="app.main.channel.misc.timed_out"
+                            fields={{
+                                // TODO: make this reactive
+                                time: dayjs().to(
+                                    channel.server.member.timeout,
+                                    true,
+                                ),
+                            }}
+                        />
+                    </div>
+                </Blocked>
+            </Base>
+        );
+    }
 
     if (!channel.havePermission("SendMessage")) {
         return (
@@ -186,7 +281,12 @@ export default observer(({ channel }: Props) => {
 
     // Push message content to draft.
     const setMessage = useCallback(
-        (content?: string) => state.draft.set(channel._id, content),
+        (content?: string) => {
+            const dobj: DraftObject = {
+                content,
+            };
+            state.draft.set(channel._id, dobj);
+        },
         [state.draft, channel._id],
     );
 
@@ -226,7 +326,7 @@ export default observer(({ channel }: Props) => {
         if (uploadState.type === "uploading" || uploadState.type === "sending")
             return;
 
-        let content = state.draft.get(channel._id)?.trim() ?? "";
+        let content = state.draft.get(channel._id)?.content?.trim() ?? "";
         if (experiments.isEnabled("censor")) {
             content = content.replace(/(?<=(^| )[A-z])([eyuioa])/g, "\\*");
         }
@@ -281,6 +381,7 @@ export default observer(({ channel }: Props) => {
             const gay = gayify();
             if (gay.length <= 2000) content = gay;
         }
+
         if (uploadState.type === "attached") return sendFile(content);
         if (content.length === 0) return;
 
@@ -365,6 +466,7 @@ export default observer(({ channel }: Props) => {
     async function sendFile(content: string) {
         if (uploadState.type !== "attached") return;
         const attachments: string[] = [];
+        setMessage;
 
         const cancel = Axios.CancelToken.source();
         const files = uploadState.files;
@@ -488,7 +590,7 @@ export default observer(({ channel }: Props) => {
     }
 
     function isInCodeBlock(cursor: number): boolean {
-        const content = state.draft.get(channel._id) || "";
+        const content = state.draft.get(channel._id)?.content || "";
         const contentBeforeCursor = content.substring(0, cursor);
 
         let delimiterCount = 0;
@@ -538,7 +640,10 @@ export default observer(({ channel }: Props) => {
                                 files: [...uploadState.files, ...files],
                             }),
                         () =>
-                            openScreen({ id: "error", error: "FileTooLarge" }),
+                            modalController.push({
+                                type: "error",
+                                error: "FileTooLarge",
+                            }),
                         true,
                     )
                 }
@@ -561,6 +666,22 @@ export default observer(({ channel }: Props) => {
                 replies={replies}
                 setReplies={setReplies}
             />
+            <FloatingLayer>
+                {picker && (
+                    <HackAlertThisFileWillBeReplaced
+                        onSelect={(emoji) => {
+                            const v = state.draft.get(channel._id);
+                            const cnt: DraftObject = {
+                                content:
+                                    (v?.content ? `${v.content} ` : "") +
+                                    `:${emoji}:`,
+                            };
+                            state.draft.set(channel._id, cnt);
+                        }}
+                        onClose={closePicker}
+                    />
+                )}
+            </FloatingLayer>
             <Base>
                 {channel.havePermission("UploadFiles") ? (
                     <FileAction>
@@ -609,7 +730,7 @@ export default observer(({ channel }: Props) => {
                     id="message"
                     maxLength={2000}
                     onKeyUp={onKeyUp}
-                    value={state.draft.get(channel._id) ?? ""}
+                    value={state.draft.get(channel._id)?.content ?? ""}
                     padding="var(--message-box-padding)"
                     onKeyDown={(e) => {
                         if (e.ctrlKey && e.key === "Enter") {
@@ -681,16 +802,11 @@ export default observer(({ channel }: Props) => {
                     onFocus={onFocus}
                     onBlur={onBlur}
                 />
-                {/*<Action>
-                    <IconButton>
-                        <Box size={24} />
-                    </IconButton>
-                </Action>
                 <Action>
-                    <IconButton>
+                    <IconButton onClick={() => setPicker(!picker)}>
                         <HappyBeaming size={24} />
                     </IconButton>
-                </Action>*/}
+                </Action>
                 <Action>
                     <IconButton
                         className={

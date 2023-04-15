@@ -1,5 +1,4 @@
-import { API, Channel, Member, Server } from "revolt.js";
-import { Permission } from "revolt.js";
+import { API, Channel, Permission, Server } from "revolt.js";
 
 import { PermissionSelect } from "./PermissionSelect";
 
@@ -19,7 +18,6 @@ export function PermissionList({ value, onChange, filter, target }: Props) {
                     (key) =>
                         ![
                             "GrantAllSafe",
-                            "TimeoutMembers",
                             "ReadMessageHistory",
                             "Speak",
                             "Video",

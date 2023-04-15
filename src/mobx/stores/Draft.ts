@@ -5,15 +5,22 @@ import { mapToRecord } from "../../lib/conversion";
 import Persistent from "../interfaces/Persistent";
 import Store from "../interfaces/Store";
 
+export interface DraftObject {
+    content?: string;
+    masquerade?: {
+        avatar: string;
+        name: string;
+    };
+}
 export interface Data {
-    drafts: Record<string, string>;
+    drafts: Record<string, DraftObject>;
 }
 
 /**
  * Handles storing draft (currently being written) messages.
  */
 export default class Draft implements Store, Persistent<Data> {
-    private drafts: ObservableMap<string, string>;
+    private drafts: ObservableMap<string, DraftObject>;
 
     /**
      * Construct new Draft store.
@@ -52,7 +59,12 @@ export default class Draft implements Store, Persistent<Data> {
      * @param channel Channel ID
      */
     @computed has(channel: string) {
-        return this.drafts.has(channel) && this.drafts.get(channel)!.length > 0;
+        if (!this.drafts.has(channel)) return false;
+        // fetch the draft object
+        const potentialDraft = this.drafts.get(channel)?.content;
+        // if it doesn't have any content return false
+        if (!potentialDraft) return false;
+        return potentialDraft.length > 0;
     }
 
     /**
@@ -60,7 +72,7 @@ export default class Draft implements Store, Persistent<Data> {
      * @param channel Channel ID
      * @param content Draft content
      */
-    @action set(channel: string, content?: string) {
+    @action set(channel: string, content?: DraftObject) {
         if (typeof content === "undefined") {
             return this.clear(channel);
         }
